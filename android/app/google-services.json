@@ -1,0 +1,118 @@
+{
+  "project_info": {
+    "project_number": "453462497977",
+    "project_id": "fir-loginsignup-6cdbe",
+    "storage_bucket": "fir-loginsignup-6cdbe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453462497977:android:6872ad268f365444c65968",
+        "android_client_info": {
+          "package_name": "com.example.clipper"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbzcqTqxmGyVFxfS6e9heoQPpWrbVo0to"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "453462497977-ba425m56ka1ncd0fm2pmm2kmsjb84c2p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.crzyCrypto"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453462497977:android:1e54f30410d20e88c65968",
+        "android_client_info": {
+          "package_name": "com.example.crzy_crypto"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbzcqTqxmGyVFxfS6e9heoQPpWrbVo0to"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "453462497977-ba425m56ka1ncd0fm2pmm2kmsjb84c2p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.crzyCrypto"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:453462497977:android:860807f935e5fdbbc65968",
+        "android_client_info": {
+          "package_name": "com.example.firebase_login_signup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbzcqTqxmGyVFxfS6e9heoQPpWrbVo0to"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "453462497977-bamb4tbhr7lpkgvsr5dohctfqckj57p6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "453462497977-ba425m56ka1ncd0fm2pmm2kmsjb84c2p.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.crzyCrypto"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
