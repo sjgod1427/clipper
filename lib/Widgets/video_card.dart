@@ -13,6 +13,34 @@ class RecentVideoCard extends StatelessWidget {
   const RecentVideoCard({Key? key, required this.video, required this.onTap})
     : super(key: key);
 
+  // Extract thumbnail URL from video URL
+  String? _getThumbnailUrl(String url) {
+    try {
+      // YouTube thumbnails
+      if (url.contains('youtube.com') || url.contains('youtu.be')) {
+        String? videoId = _extractYouTubeVideoId(url);
+        if (videoId != null) {
+          // Use maxresdefault for best quality, fallback to hqdefault
+          return 'https://img.youtube.com/vi/$videoId/maxresdefault.jpg';
+        }
+      }
+      // Instagram thumbnails (limited support - Instagram blocks direct image access)
+      else if (url.contains('instagram.com')) {
+        // Instagram doesn't allow direct thumbnail extraction
+        // You would need to use Instagram's API for this
+        return null;
+      }
+      // TikTok thumbnails (limited support)
+      else if (url.contains('tiktok.com')) {
+        // TikTok also requires API access for thumbnails
+        return null;
+      }
+    } catch (e) {
+      print('Error extracting thumbnail: $e');
+    }
+    return null;
+  }
+
   // Helper methods
   IconData _getPlatformIcon(String url) {
     if (url.contains('youtube.com') || url.contains('youtu.be')) {
@@ -157,7 +185,7 @@ class RecentVideoCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Collection (placeholder)
+                        // Collection
                         const Text(
                           'Collection',
                           style: TextStyle(
@@ -265,7 +293,10 @@ class RecentVideoCard extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _launchUrl(context, video.url);
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF7C4DFF),
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -294,7 +325,6 @@ class RecentVideoCard extends StatelessWidget {
   }
 
   Widget _buildTagChips(List<String> tags) {
-    print("${tags} Hi");
     if (tags.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
@@ -323,6 +353,139 @@ class RecentVideoCard extends StatelessWidget {
     );
   }
 
+  // Build thumbnail widget with fallback gradient
+  Widget _buildThumbnail() {
+    final thumbnailUrl = _getThumbnailUrl(video.url);
+
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+        gradient: thumbnailUrl == null
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
+              )
+            : null,
+      ),
+      child: Stack(
+        children: [
+          // Thumbnail image (if available)
+          if (thumbnailUrl != null)
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              child: Image.network(
+                thumbnailUrl,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback to gradient if image fails to load
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF7C4DFF),
+                          const Color(0xFF9C27B0),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF7C4DFF),
+                          const Color(0xFF9C27B0),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                            : null,
+                        color: Colors.white,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          // Dark overlay for better text visibility
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withOpacity(0.3),
+                  Colors.black.withOpacity(0.1),
+                ],
+              ),
+            ),
+          ),
+          // Play overlay
+          Center(
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.6),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getPlatformIcon(video.url),
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ),
+          // Platform indicator
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _getPlatformName(video.url),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -344,65 +507,8 @@ class RecentVideoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail section
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
-                ),
-              ),
-              child: Stack(
-                children: [
-                  // Play overlay
-                  Center(
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getPlatformIcon(video.url),
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                  ),
-                  // Platform indicator
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        _getPlatformName(video.url),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Thumbnail section with real thumbnails
+            _buildThumbnail(),
             // Content section
             Padding(
               padding: const EdgeInsets.all(16),
@@ -478,13 +584,10 @@ class RecentVideoCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-
                           // Edit button
-                          // Replace the Edit button onPressed with this fixed version:
                           ElevatedButton(
                             onPressed: () async {
                               try {
-                                // Find the collection name
                                 String? collectionName =
                                     await FirestoreService()
                                         .findVideoCollection(
@@ -496,7 +599,6 @@ class RecentVideoCard extends StatelessWidget {
                                         );
 
                                 if (collectionName != null) {
-                                  // Show edit dialog
                                   showDialog(
                                     context: context,
                                     builder: (context) => EditContentDialog(
@@ -509,7 +611,6 @@ class RecentVideoCard extends StatelessWidget {
                                     ),
                                   );
                                 } else {
-                                  // Show error message
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text(
@@ -520,7 +621,6 @@ class RecentVideoCard extends StatelessWidget {
                                   );
                                 }
                               } catch (e) {
-                                // Show error message
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text('Error: $e'),
@@ -556,7 +656,6 @@ class RecentVideoCard extends StatelessWidget {
                           // Open button
                           ElevatedButton(
                             onPressed: () async {
-                              print(video.url);
                               _launchUrl(context, video.url);
                             },
                             style: ElevatedButton.styleFrom(
@@ -615,19 +714,12 @@ class RecentVideoCard extends StatelessWidget {
       return;
     }
 
-    print('Original URL: $url');
-
     try {
-      // Handle YouTube URLs
       if (url.contains('youtube.com') || url.contains('youtu.be')) {
         await _launchYouTube(url);
-      }
-      // Handle Instagram URLs
-      else if (url.contains('instagram.com')) {
+      } else if (url.contains('instagram.com')) {
         await _launchInstagram(url);
-      }
-      // Handle other URLs
-      else {
+      } else {
         await _launchDefault(url);
       }
     } catch (e) {
@@ -638,11 +730,9 @@ class RecentVideoCard extends StatelessWidget {
 
   Future<void> _launchYouTube(String url) async {
     try {
-      // First try to open in YouTube app with the original URL format
       String appUrl;
 
       if (url.contains('/shorts/')) {
-        // For YouTube Shorts, try to extract the video ID and convert to regular format
         String? videoId = _extractYouTubeVideoId(url);
         if (videoId != null) {
           appUrl = 'vnd.youtube://$videoId';
@@ -652,7 +742,6 @@ class RecentVideoCard extends StatelessWidget {
               .replaceAll('https://www.youtube.com', 'vnd.youtube:');
         }
       } else {
-        // For regular YouTube URLs
         appUrl = url
             .replaceAll('https://youtube.com', 'vnd.youtube:')
             .replaceAll('https://www.youtube.com', 'vnd.youtube:')
@@ -660,20 +749,15 @@ class RecentVideoCard extends StatelessWidget {
       }
 
       Uri appUri = Uri.parse(appUrl);
-      print('Trying YouTube app URL: $appUrl');
 
       if (await canLaunchUrl(appUri)) {
         bool launched = await launchUrl(appUri);
         if (launched) return;
       }
 
-      // Fallback: Open original URL in browser
-      print('Falling back to browser with original URL: $url');
       Uri webUri = Uri.parse(url);
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      print('YouTube launch error: $e');
-      // Final fallback: try original URL
       Uri uri = Uri.parse(url);
       await launchUrl(uri, mode: LaunchMode.platformDefault);
     }
@@ -681,7 +765,6 @@ class RecentVideoCard extends StatelessWidget {
 
   Future<void> _launchInstagram(String url) async {
     try {
-      // Try Instagram app first
       String appUrl = url
           .replaceAll('https://instagram.com', 'instagram://')
           .replaceAll('https://www.instagram.com', 'instagram://');
@@ -693,11 +776,9 @@ class RecentVideoCard extends StatelessWidget {
         if (launched) return;
       }
 
-      // Fallback to browser
       Uri webUri = Uri.parse(url);
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      print('Instagram launch error: $e');
       Uri uri = Uri.parse(url);
       await launchUrl(uri, mode: LaunchMode.platformDefault);
     }
@@ -706,7 +787,6 @@ class RecentVideoCard extends StatelessWidget {
   Future<void> _launchDefault(String url) async {
     String urlToLaunch = url;
 
-    // Ensure URL has proper protocol
     if (!urlToLaunch.startsWith('http://') &&
         !urlToLaunch.startsWith('https://')) {
       urlToLaunch = 'https://$urlToLaunch';
@@ -725,16 +805,13 @@ class RecentVideoCard extends StatelessWidget {
     }
   }
 
-  // Updated YouTube video ID extraction for Shorts support
   String? _extractYouTubeVideoId(String url) {
-    // Handle YouTube Shorts
     if (url.contains('/shorts/')) {
       final shortsRegExp = RegExp(r'/shorts/([a-zA-Z0-9_-]{11})');
       final match = shortsRegExp.firstMatch(url);
       return match?.group(1);
     }
 
-    // Handle regular YouTube URLs
     final regExp = RegExp(
       r'(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})',
       caseSensitive: false,
