@@ -306,11 +306,11 @@ class _LoginScreenState extends State<LoginScreen>
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 35),
 
                       // Login/Register Form
                       Container(
-                        padding: const EdgeInsets.all(32),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
