@@ -85,7 +85,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         backgroundColor: Theme.of(
           context,
         ).bottomNavigationBarTheme.backgroundColor,
-        elevation: 8,
+        elevation: 5,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
@@ -98,16 +98,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddUrlScreen()),
-          );
-        },
-        shape: const CircleBorder(),
-        backgroundColor: const Color(0xFF7C4DFF),
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(top: 30), // Shift down by 20 pixels
+        child: FloatingActionButton.small(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => AddUrlScreen()),
+            );
+          },
+          shape: const CircleBorder(),
+          backgroundColor: const Color(0xFF7C4DFF),
+          child: const Icon(Icons.add, color: Colors.white, size: 20),
+        ),
       ),
     );
   }
