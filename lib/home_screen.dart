@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:clipper/Widgets/collection_card.dart';
 import 'package:clipper/Widgets/video_card.dart';
 import 'package:clipper/add_url_screen.dart';
 import 'package:clipper/collections.dart';
@@ -551,83 +552,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: const Text('OK', style: TextStyle(color: Color(0xFF7C4DFF))),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class CollectionCard extends StatelessWidget {
-  final CollectionModel collection;
-  final VoidCallback onTap;
-
-  const CollectionCard({
-    Key? key,
-    required this.collection,
-    required this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: collection.color,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon row
-            Icon(
-              collection.icon,
-              color: collection.color.computeLuminance() > 0.5
-                  ? Colors.black87
-                  : Colors.white,
-              size: 28,
-            ),
-
-            const Spacer(),
-
-            // Collection info at bottom
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  collection.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: collection.color.computeLuminance() > 0.5
-                        ? Colors.black87
-                        : Colors.white,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${collection.itemCount} ${collection.itemCount == 1 ? 'item' : 'items'}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: collection.color.computeLuminance() > 0.5
-                        ? Colors.black54
-                        : Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

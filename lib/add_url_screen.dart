@@ -439,7 +439,7 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
     // Get theme colors
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDarkMode ? const Color(0xFF121212) : Colors.white;
-    final cardColor = isDarkMode ? const Color(0xFF1E1E1E) : Colors.white;
+
     final textColor = isDarkMode ? Colors.white : Colors.black87;
     final hintColor = isDarkMode ? Colors.grey[500] : Colors.grey.shade500;
     final borderColor = isDarkMode ? Colors.grey[600] : Colors.grey.shade300;

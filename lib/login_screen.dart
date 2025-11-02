@@ -263,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen>
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(16.0),
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: SlideTransition(
@@ -273,19 +273,18 @@ class _LoginScreenState extends State<LoginScreen>
                     children: [
                       // App Logo/Icon
                       Container(
-                        width: 100,
-                        height: 100,
+                        width: 70,
+                        height: 70,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.collections_bookmark_rounded,
-                          size: 50,
+                          size: 40,
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 32),
 
                       // Welcome Text
                       Text(
@@ -302,11 +301,11 @@ class _LoginScreenState extends State<LoginScreen>
                             ? 'Sign in to continue'
                             : 'Join us to save your favorite content',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 18,
                           color: Colors.white.withOpacity(0.8),
                         ),
                       ),
-                      const SizedBox(height: 35),
+                      const SizedBox(height: 15),
 
                       // Login/Register Form
                       Container(
@@ -446,7 +445,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   contentPadding: const EdgeInsets.all(20),
                                 ),
                               ),
-                              const SizedBox(height: 20),
+                              const SizedBox(height: 10),
 
                               // Password Field
                               TextFormField(
@@ -495,7 +494,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   contentPadding: const EdgeInsets.all(20),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 20),
 
                               // Email Login/Register Button
                               SizedBox(
@@ -565,7 +564,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                               // Optional: Forgot Password Link (only show in login mode)
                               if (isLogin) ...[
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 8),
                                 Center(
                                   child: GestureDetector(
                                     onTap: () {
@@ -602,7 +601,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 10),
 
                       // Optional: Terms and Privacy (for registration)
                       if (!isLogin)

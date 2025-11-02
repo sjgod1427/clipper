@@ -1461,7 +1461,7 @@ class GeminiService {
             element.attributes['content'] ??
             element.attributes['title'] ??
             element.text;
-        if (content != null && content.isNotEmpty) {
+        if (content.isNotEmpty) {
           final number = _extractNumberFromText(content);
           if (number.isNotEmpty) return number;
         }
@@ -1493,7 +1493,7 @@ class GeminiService {
             element.attributes['content'] ??
             element.attributes['title'] ??
             element.text;
-        if (content != null && content.isNotEmpty) {
+        if (content.isNotEmpty) {
           final number = _extractNumberFromText(content);
           if (number.isNotEmpty) return number;
         }
@@ -1522,7 +1522,7 @@ class GeminiService {
             element.attributes['content'] ??
             element.attributes['title'] ??
             element.text;
-        if (content != null && content.isNotEmpty) {
+        if (content.isNotEmpty) {
           final number = _extractNumberFromText(content);
           if (number.isNotEmpty) return number;
         }
@@ -1567,7 +1567,7 @@ class GeminiService {
             element.attributes['content'] ??
             element.attributes['title'] ??
             element.text;
-        if (content != null && content.isNotEmpty) {
+        if (content.isNotEmpty) {
           final number = _extractNumberFromText(content);
           if (number.isNotEmpty) return number;
         }
@@ -1644,7 +1644,7 @@ class GeminiService {
 
   // Helper methods for content extraction (keeping existing YouTube methods)
   String _extractTitle(dom.Document document) {
-    return document.querySelector('title')?.text?.trim() ??
+    return document.querySelector('title')?.text.trim() ??
         _extractFromMeta(document, 'property="og:title"') ??
         _extractFromMeta(document, 'name="twitter:title"') ??
         '';
@@ -1699,7 +1699,7 @@ class GeminiService {
     return document
             .querySelector('span[itemprop="author"] link[itemprop="name"]')
             ?.attributes['content'] ??
-        document.querySelector('.ytd-channel-name a')?.text?.trim() ??
+        document.querySelector('.ytd-channel-name a')?.text.trim() ??
         '';
   }
 
@@ -1707,7 +1707,7 @@ class GeminiService {
     return document
             .querySelector('meta[itemprop="interactionCount"]')
             ?.attributes['content'] ??
-        document.querySelector('.view-count')?.text?.trim() ??
+        document.querySelector('.view-count')?.text.trim() ??
         '';
   }
 
@@ -1715,7 +1715,7 @@ class GeminiService {
     return document
             .querySelector('button[aria-label*="$type"] span')
             ?.text
-            ?.trim() ??
+            .trim() ??
         '';
   }
 
@@ -1733,9 +1733,9 @@ class GeminiService {
 
   String _extractGenericAuthor(dom.Document document) {
     return _extractFromMeta(document, 'name="author"') ??
-        document.querySelector('.author')?.text?.trim() ??
-        document.querySelector('[rel="author"]')?.text?.trim() ??
-        document.querySelector('.byline')?.text?.trim() ??
+        document.querySelector('.author')?.text.trim() ??
+        document.querySelector('[rel="author"]')?.text.trim() ??
+        document.querySelector('.byline')?.text.trim() ??
         '';
   }
 
