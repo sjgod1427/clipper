@@ -14,8 +14,12 @@ const platform = MethodChannel('com.example.clipper/share');
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  final sharedText = await platform.invokeMethod<String>('getSharedText');
-  // runApp(MyApp(sharedText: sharedText));
+  String? sharedText;
+  try {
+    sharedText = await platform.invokeMethod<String>('getSharedText');
+  } catch (e) {
+    // Share extension not available on this platform
+  }
   runApp(
     ChangeNotifierProvider(
       create: (context) => ThemeProvider(),
