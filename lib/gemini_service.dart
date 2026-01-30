@@ -8,10 +8,13 @@ import 'package:html/dom.dart' as dom;
 
 class GeminiService {
   String? instagramAccessToken;
-  // Reference to InstagramService for Graph API calls
+  // Reference to InstagramService for authenticated fetching
   dynamic instagramService;
+
   static const String _geminiApiUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';
+  static const String _geminiUploadUrl =
+      'https://generativelanguage.googleapis.com/upload/v1beta/files';
   static const String _apiKey =
       "AIzaSyBwk-1wF2ze3pa8BgOcFYDZV2eySw9YthY";
 
@@ -34,6 +37,184 @@ class GeminiService {
   // Remove hashtags from text to get clean caption
   String _removeHashtags(String text) {
     return text.replaceAll(RegExp(r'#\w+\s*'), '').trim();
+  }
+
+  // Analyze Instagram video using Gemini AI
+  Future<Map<String, dynamic>?> _analyzeInstagramVideo(
+    String videoUrl,
+    Map<String, dynamic> metadata,
+  ) async {
+    try {
+      // Download video to temp file
+      final videoFile = await instagramService.downloadVideo(videoUrl);
+      if (videoFile == null) {
+        print('Failed to download video for analysis');
+        return null;
+      }
+
+      try {
+        // Upload video to Gemini Files API
+        final fileUri = await _uploadVideoToGemini(videoFile);
+        if (fileUri == null) {
+          print('Failed to upload video to Gemini');
+          return null;
+        }
+
+        // Wait for video processing
+        await Future.delayed(const Duration(seconds: 3));
+
+        // Send to Gemini for analysis
+        final author = metadata['author']?.toString() ?? '';
+        final existingCaption = metadata['rawCaption']?.toString() ?? '';
+        final hashtags = metadata['hashtags'] as List? ?? [];
+
+        final prompt = '''
+Analyze this Instagram reel video and provide a detailed summary of its content.
+
+${author.isNotEmpty ? 'Creator: $author' : ''}
+${existingCaption.isNotEmpty ? 'Original caption: $existingCaption' : ''}
+
+Please describe:
+1. What is happening in the video (main subject, actions, scenes)
+2. The key message or purpose of the content
+3. Any text overlays, spoken words, or music that's relevant
+4. The overall mood/tone of the video
+
+Provide a comprehensive 2-4 sentence description that captures what a viewer would learn or experience from this reel.
+''';
+
+        final requestBody = {
+          'contents': [
+            {
+              'parts': [
+                {
+                  'fileData': {
+                    'mimeType': 'video/mp4',
+                    'fileUri': fileUri,
+                  }
+                },
+                {'text': prompt},
+              ],
+            },
+          ],
+          'generationConfig': {
+            'temperature': 0.7,
+            'maxOutputTokens': 1024,
+          },
+        };
+
+        final client = http.Client();
+        final response = await client
+            .post(
+              Uri.parse('$_geminiApiUrl?key=$_apiKey'),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(requestBody),
+            )
+            .timeout(const Duration(seconds: 60));
+        client.close();
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data['candidates'] != null &&
+              data['candidates'].isNotEmpty &&
+              data['candidates'][0]['content'] != null) {
+            final summary = data['candidates'][0]['content']['parts'][0]['text']?.toString() ?? '';
+
+            if (summary.isNotEmpty) {
+              final contentType = metadata['contentType']?.toString() ?? 'reel';
+              return {
+                'title': summary.split('.').first.trim(),
+                'description': summary.trim(),
+                'author': author,
+                'platform': 'Instagram',
+                'contentType': contentType,
+                'thumbnail': metadata['thumbnail']?.toString() ?? '',
+                'publishDate': '',
+                'duration': '',
+                'viewCount': '',
+                'engagement': {},
+                'hashtags': hashtags,
+                'rawCaption': existingCaption,
+                'aiSummary': true, // Flag to indicate this came from AI analysis
+              };
+            }
+          }
+        } else {
+          print('Gemini video analysis failed: ${response.statusCode} - ${response.body}');
+        }
+      } finally {
+        // Clean up temp file
+        try {
+          await videoFile.delete();
+        } catch (_) {}
+      }
+    } catch (e) {
+      print('Error analyzing Instagram video: $e');
+    }
+    return null;
+  }
+
+  // Upload video to Gemini Files API
+  Future<String?> _uploadVideoToGemini(File videoFile) async {
+    try {
+      final fileBytes = await videoFile.readAsBytes();
+      final fileSize = fileBytes.length;
+
+      // Start resumable upload
+      final client = http.Client();
+
+      final initResponse = await client.post(
+        Uri.parse('$_geminiUploadUrl?key=$_apiKey'),
+        headers: {
+          'X-Goog-Upload-Protocol': 'resumable',
+          'X-Goog-Upload-Command': 'start',
+          'X-Goog-Upload-Header-Content-Length': fileSize.toString(),
+          'X-Goog-Upload-Header-Content-Type': 'video/mp4',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'file': {'displayName': 'instagram_reel.mp4'}
+        }),
+      );
+
+      if (initResponse.statusCode != 200) {
+        print('Failed to init upload: ${initResponse.statusCode}');
+        client.close();
+        return null;
+      }
+
+      final uploadUrl = initResponse.headers['x-goog-upload-url'];
+      if (uploadUrl == null) {
+        print('No upload URL in response');
+        client.close();
+        return null;
+      }
+
+      // Upload the file
+      final uploadResponse = await client.post(
+        Uri.parse(uploadUrl),
+        headers: {
+          'X-Goog-Upload-Command': 'upload, finalize',
+          'X-Goog-Upload-Offset': '0',
+          'Content-Type': 'video/mp4',
+        },
+        body: fileBytes,
+      );
+
+      client.close();
+
+      if (uploadResponse.statusCode == 200) {
+        final data = jsonDecode(uploadResponse.body);
+        final fileUri = data['file']?['uri']?.toString();
+        print('Video uploaded to Gemini: $fileUri');
+        return fileUri;
+      } else {
+        print('Failed to upload video: ${uploadResponse.statusCode} - ${uploadResponse.body}');
+      }
+    } catch (e) {
+      print('Error uploading video to Gemini: $e');
+    }
+    return null;
   }
 
   // Fetch actual content from URL
@@ -290,15 +471,32 @@ class GeminiService {
       contentType = 'igtv';
     }
 
-    // Strategy 0: Use authenticated session if user has connected Instagram
+    // Strategy 0: Use authenticated session + AI video analysis if user has connected Instagram
     if (instagramService != null) {
       try {
-        final graphResult = await instagramService.fetchWithAuth(url);
-        if (graphResult != null && _hasUsefulData(graphResult)) {
-          return graphResult;
+        final authResult = await instagramService.fetchWithAuth(url);
+        if (authResult != null) {
+          final videoUrl = authResult['videoUrl']?.toString() ?? '';
+
+          // Try AI video analysis first for reels/videos
+          if (videoUrl.isNotEmpty && (contentType == 'reel' || contentType == 'igtv')) {
+            print('Attempting AI video analysis for Instagram $contentType...');
+            final videoSummary = await _analyzeInstagramVideo(videoUrl, authResult);
+            if (videoSummary != null && _hasUsefulData(videoSummary)) {
+              print('AI video analysis successful!');
+              return videoSummary;
+            }
+            print('AI video analysis failed, falling back to scraped data');
+          }
+
+          // Fall back to scraped caption data
+          if (_hasUsefulData(authResult)) {
+            print('Using authenticated scraped data');
+            return authResult;
+          }
         }
       } catch (e) {
-        print('Instagram Graph API strategy failed: $e');
+        print('Instagram authenticated strategy failed: $e');
       }
     }
 

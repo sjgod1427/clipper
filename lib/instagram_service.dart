@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+import 'package:path_provider/path_provider.dart';
 
 class InstagramService extends ChangeNotifier {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -191,7 +193,7 @@ class InstagramService extends ChangeNotifier {
   }
 
   /// Fetch Instagram content using authenticated session cookies.
-  /// Returns null if not connected or fetch fails — caller should fall back to scraping.
+  /// Returns video URL if available for AI analysis, plus scraped metadata.
   Future<Map<String, dynamic>?> fetchWithAuth(String url) async {
     if (!_isConnected || _sessionId == null) return null;
 
@@ -218,15 +220,28 @@ class InstagramService extends ChangeNotifier {
       final ogDesc = _extractMeta(document, 'property="og:description"') ?? '';
       final ogTitle = _extractMeta(document, 'property="og:title"') ?? '';
       final ogImage = _extractMeta(document, 'property="og:image"') ?? '';
+      final ogVideo = _extractMeta(document, 'property="og:video"') ??
+                      _extractMeta(document, 'property="og:video:url"') ?? '';
 
       // Try extracting from embedded JSON (works better when logged in)
       String caption = '';
       String author = '';
       String thumbnail = ogImage;
+      String videoUrl = ogVideo;
 
       final scripts = document.querySelectorAll('script');
       for (final script in scripts) {
         final text = script.text;
+
+        // Look for video URL in JSON data
+        if (videoUrl.isEmpty) {
+          final videoMatch = RegExp(r'"video_url"\s*:\s*"([^"]+)"').firstMatch(text);
+          if (videoMatch != null) {
+            videoUrl = videoMatch.group(1)!
+                .replaceAll('\\u0026', '&')
+                .replaceAll('\\/', '/');
+          }
+        }
 
         // Look for shared data JSON
         if (text.contains('window._sharedData') || text.contains('window.__additionalDataLoaded')) {
@@ -244,7 +259,7 @@ class InstagramService extends ChangeNotifier {
             author = usernameMatch.group(1)!;
           }
 
-          if (caption.isNotEmpty) break;
+          if (caption.isNotEmpty && videoUrl.isNotEmpty) break;
         }
 
         // Also try the newer require/relay data format
@@ -272,7 +287,7 @@ class InstagramService extends ChangeNotifier {
         caption = ogDesc.isNotEmpty ? ogDesc : ogTitle;
       }
 
-      if (caption.isEmpty && author.isEmpty) return null;
+      if (caption.isEmpty && author.isEmpty && videoUrl.isEmpty) return null;
 
       // Extract author from og:title if still empty
       if (author.isEmpty && ogTitle.contains('(@')) {
@@ -293,6 +308,8 @@ class InstagramService extends ChangeNotifier {
       final hashtags = hashtagRegex.allMatches(caption).map((m) => m.group(1)!).toList();
       final cleanCaption = caption.replaceAll(RegExp(r'#\w+\s*'), '').trim();
 
+      print('Instagram auth fetch - videoUrl: ${videoUrl.isNotEmpty ? "found" : "not found"}, caption: ${caption.length} chars');
+
       return {
         'title': cleanCaption.isNotEmpty ? cleanCaption : 'Instagram $contentType',
         'description': cleanCaption,
@@ -300,6 +317,7 @@ class InstagramService extends ChangeNotifier {
         'platform': 'Instagram',
         'contentType': contentType,
         'thumbnail': thumbnail,
+        'videoUrl': videoUrl, // Pass video URL for AI analysis
         'publishDate': '',
         'duration': '',
         'viewCount': '',
@@ -311,6 +329,29 @@ class InstagramService extends ChangeNotifier {
       print('Instagram authenticated fetch failed: $e');
       return null;
     }
+  }
+
+  /// Download video to temp file for AI analysis
+  Future<File?> downloadVideo(String videoUrl) async {
+    if (videoUrl.isEmpty) return null;
+
+    try {
+      final response = await http.get(
+        Uri.parse(videoUrl),
+        headers: _authHeaders,
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/ig_reel_${DateTime.now().millisecondsSinceEpoch}.mp4');
+        await file.writeAsBytes(response.bodyBytes);
+        print('Instagram video downloaded: ${file.path} (${response.bodyBytes.length} bytes)');
+        return file;
+      }
+    } catch (e) {
+      print('Failed to download Instagram video: $e');
+    }
+    return null;
   }
 
   String? _extractMeta(dynamic document, String selector) {
