@@ -7,6 +7,9 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:html/dom.dart' as dom;
 
 class GeminiService {
+  String? instagramAccessToken;
+  // Reference to InstagramService for Graph API calls
+  dynamic instagramService;
   static const String _geminiApiUrl =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';
   static const String _apiKey =
@@ -285,6 +288,18 @@ class GeminiService {
       contentType = 'story';
     } else if (url.contains('/tv/')) {
       contentType = 'igtv';
+    }
+
+    // Strategy 0: Use authenticated session if user has connected Instagram
+    if (instagramService != null) {
+      try {
+        final graphResult = await instagramService.fetchWithAuth(url);
+        if (graphResult != null && _hasUsefulData(graphResult)) {
+          return graphResult;
+        }
+      } catch (e) {
+        print('Instagram Graph API strategy failed: $e');
+      }
     }
 
     // Strategy 1: Try fetching HTML with og: meta tags

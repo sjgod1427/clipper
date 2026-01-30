@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:clipper/instagram_service.dart';
 
 const platform = MethodChannel('com.app.clipvault/share');
 
@@ -17,8 +18,11 @@ void main() async {
   final sharedText = await platform.invokeMethod<String>('getSharedText');
   // runApp(MyApp(sharedText: sharedText));
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => InstagramService()),
+      ],
       child: MyApp(sharedText: sharedText),
     ),
   );

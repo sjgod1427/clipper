@@ -1,10 +1,12 @@
 import 'package:clipper/gemini_service.dart';
 import 'package:clipper/firebase_service.dart';
+import 'package:clipper/instagram_service.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 class AddUrlScreen extends StatefulWidget {
   final String? sharedText;
@@ -312,7 +314,12 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
 
     try {
       final existingCollections = collections;
-      final info = await GeminiService().generateDetailsFromUrl(
+      final geminiService = GeminiService();
+      final instagramService = Provider.of<InstagramService>(context, listen: false);
+      if (instagramService.isConnected) {
+        geminiService.instagramService = instagramService;
+      }
+      final info = await geminiService.generateDetailsFromUrl(
         url,
         existingCollections: existingCollections,
       );

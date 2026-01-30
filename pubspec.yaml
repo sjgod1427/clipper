@@ -42,7 +42,9 @@ dependencies:
   provider: ^6.1.5+1
   google_sign_in: ^6.1.6
   upgrader: ^11.5.0
-  
+  flutter_secure_storage: ^9.0.0
+  flutter_inappwebview: ^6.0.0
+
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

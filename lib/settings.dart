@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
+import 'package:clipper/instagram_service.dart';
 
 // Theme Provider (same as before but with enhanced dark theme)
 class ThemeProvider extends ChangeNotifier {
@@ -1313,6 +1314,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       const SizedBox(height: 24),
 
+                      _buildSectionTitle('Connected Accounts'),
+                      _buildConnectedAccountsSection(),
+
+                      const SizedBox(height: 24),
+
                       _buildSectionTitle('Support'),
                       _buildSettingsCard([
                         _buildSettingsTile(
@@ -1539,6 +1545,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    );
+  }
+
+  Widget _buildConnectedAccountsSection() {
+    return Consumer<InstagramService>(
+      builder: (context, instagramService, child) {
+        return _buildSettingsCard([
+          ListTile(
+            leading: const Icon(Icons.camera_alt, color: Color(0xFFE1306C)),
+            title: Text(
+              instagramService.isConnected
+                  ? 'Instagram (${instagramService.username ?? 'connected'})'
+                  : 'Connect Instagram',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            subtitle: Text(
+              instagramService.isConnected
+                  ? 'Tap to disconnect'
+                  : 'Enable reel caption fetching',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            trailing: instagramService.isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : instagramService.isConnected
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            onTap: instagramService.isLoading
+                ? null
+                : () async {
+                    if (instagramService.isConnected) {
+                      final shouldDisconnect = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Disconnect Instagram'),
+                          content: const Text(
+                            'Are you sure you want to disconnect your Instagram account? Reel captions will fall back to scraping.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text('Disconnect', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (shouldDisconnect == true) {
+                        try {
+                          await instagramService.disconnectInstagram();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Instagram disconnected'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      try {
+                        final success = await instagramService.connectInstagram(context);
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Instagram connected as @${instagramService.username ?? "user"}'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to connect: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+          ),
+        ]);
+      },
     );
   }
 
