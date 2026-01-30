@@ -315,7 +315,10 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
     try {
       final existingCollections = collections;
       final geminiService = GeminiService();
-      final instagramService = Provider.of<InstagramService>(context, listen: false);
+      final instagramService = Provider.of<InstagramService>(
+        context,
+        listen: false,
+      );
       if (instagramService.isConnected) {
         geminiService.instagramService = instagramService;
       }
@@ -378,12 +381,18 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
           .where((tag) => tag.isNotEmpty)
           .toList();
 
+      final String collectionId = selectedCollection ?? 'Default';
+
       final videoData = {
+        'description': desc,
+        'tag': tagsText,
+        'url': url,
         'name': name,
         'platform': _getPlatformFromUrl(url),
-        'description': desc,
         'tags': tags,
-        'url': url,
+        // 🔥 THIS IS THE IMPORTANT LINE
+        'collection': collectionId,
+
         'createdAt': FieldValue.serverTimestamp(),
       };
 

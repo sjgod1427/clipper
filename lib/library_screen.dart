@@ -554,9 +554,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ..._filteredVideos.map((video) {
                         return Padding(
                           padding: const EdgeInsets.only(
-                            left: 20,
-                            right: 20,
-                            bottom: 12,
+                            left: 4,
+                            right: 4,
+                            bottom: 4,
                           ),
                           child: RecentVideoCard(video: video, onTap: () => {}),
                         );

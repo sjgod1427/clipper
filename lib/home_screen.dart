@@ -233,9 +233,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Collections Section
                       _buildRecentlySavedSection(isDarkMode),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 22),
 
-                      // Recently Saved Section
                       _buildCollectionsSection(isDarkMode),
                     ],
                   ),
@@ -398,7 +397,7 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             : SizedBox(
                 height:
-                    MediaQuery.of(context).size.width * 0.85 * 1.2 +
+                    MediaQuery.of(context).size.width * 0.65 * 1.2 +
                     32, // Adaptive height based on card
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,

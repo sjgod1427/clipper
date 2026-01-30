@@ -33,6 +33,18 @@ class VideoModel {
     };
   }
 
+  /// Convert to Firestore-compatible format (uses Timestamp for dates)
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'platform': platform,
+      'description': description,
+      'tags': tags,
+      'url': url,
+      'createdAt': Timestamp.fromDate(createdAt),
+    };
+  }
+
   factory VideoModel.fromJson(Map<String, dynamic> json) {
     return VideoModel(
       id: json['id'],
@@ -46,6 +58,17 @@ class VideoModel {
   }
 
   factory VideoModel.fromFirestore(String id, Map<String, dynamic> data) {
+    // Handle createdAt which can be Timestamp, int, or null
+    DateTime createdAtDate;
+    final createdAtValue = data['createdAt'];
+    if (createdAtValue is Timestamp) {
+      createdAtDate = createdAtValue.toDate();
+    } else if (createdAtValue is int) {
+      createdAtDate = DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+    } else {
+      createdAtDate = DateTime.now();
+    }
+
     return VideoModel(
       id: id,
       name: data['name'] ?? '',
@@ -53,7 +76,7 @@ class VideoModel {
       description: data['description'] ?? '',
       tags: List<String>.from(data['tags'] ?? []),
       url: data['url'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: createdAtDate,
     );
   }
 }

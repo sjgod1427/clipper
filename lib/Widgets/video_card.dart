@@ -655,37 +655,6 @@ class RecentVideoCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTagChips(List<String> tags) {
-    if (tags.isEmpty) return const SizedBox.shrink();
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      children: tags
-          .take(3)
-          .map(
-            (tag) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getTagColor(tag),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                tag.length > 10 ? '${tag.substring(0, 10)}...' : tag,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-
   // Build full cover thumbnail for the card
   Widget _buildFullCoverThumbnail(BuildContext context) {
     return FutureBuilder<String?>(
@@ -799,7 +768,7 @@ class RecentVideoCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         decoration: BoxDecoration(
           color: isPrimary
               ? const Color(0xFF7C4DFF)
@@ -833,185 +802,6 @@ class RecentVideoCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildThumbnail(BuildContext context) {
-    // Use FutureBuilder for async thumbnail fetching (needed for Instagram)
-    return FutureBuilder<String?>(
-      future: _getThumbnailUrl(video.url),
-      builder: (context, snapshot) {
-        final thumbnailUrl = snapshot.data;
-        final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
-        return Container(
-          height: 180,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              topRight: Radius.circular(12),
-            ),
-            gradient: thumbnailUrl == null
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
-                  )
-                : null,
-          ),
-          child: Stack(
-            children: [
-              // Thumbnail image (if available)
-              if (thumbnailUrl != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    thumbnailUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback to gradient if image fails to load
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF7C4DFF),
-                              const Color(0xFF9C27B0),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              const Color(0xFF7C4DFF),
-                              const Color(0xFF9C27B0),
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                )
-              else if (isLoading)
-                // Show loading indicator while fetching Instagram thumbnail
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF7C4DFF),
-                        const Color(0xFF9C27B0),
-                      ],
-                    ),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
-                ),
-              // Dark overlay for better text visibility
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.3),
-                      Colors.black.withOpacity(0.1),
-                    ],
-                  ),
-                ),
-              ),
-              // Play overlay
-              Center(
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _getPlatformIcon(video.url),
-                    color: Colors.white,
-                    size: 30,
-                  ),
-                ),
-              ),
-              // Delete button - Top left
-              Positioned(
-                top: 12,
-                left: 12,
-                child: GestureDetector(
-                  onTap: () => _showDeleteConfirmation(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ),
-              // Platform indicator
-              Positioned(
-                top: 12,
-                right: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    _getPlatformName(video.url),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1183,7 +973,7 @@ class RecentVideoCard extends StatelessWidget {
                               onTap: () => _showContentInfo(context),
                               isPrimary: false,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             // Edit button
                             _buildOverlayButton(
                               icon: Icons.edit_outlined,
@@ -1233,7 +1023,7 @@ class RecentVideoCard extends StatelessWidget {
                               },
                               isPrimary: false,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             // Open button
                             Expanded(
                               child: _buildOverlayButton(

@@ -15,8 +15,7 @@ class GeminiService {
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent';
   static const String _geminiUploadUrl =
       'https://generativelanguage.googleapis.com/upload/v1beta/files';
-  static const String _apiKey =
-      "AIzaSyBwk-1wF2ze3pa8BgOcFYDZV2eySw9YthY";
+  static const String _apiKey = "AIzaSyBwk-1wF2ze3pa8BgOcFYDZV2eySw9YthY";
 
   // Test network connectivity first
   Future<bool> _testNetworkConnectivity() async {
@@ -68,7 +67,8 @@ class GeminiService {
         final existingCaption = metadata['rawCaption']?.toString() ?? '';
         final hashtags = metadata['hashtags'] as List? ?? [];
 
-        final prompt = '''
+        final prompt =
+            '''
 Analyze this Instagram reel video and provide a detailed summary of its content.
 
 ${author.isNotEmpty ? 'Creator: $author' : ''}
@@ -88,19 +88,13 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
             {
               'parts': [
                 {
-                  'fileData': {
-                    'mimeType': 'video/mp4',
-                    'fileUri': fileUri,
-                  }
+                  'fileData': {'mimeType': 'video/mp4', 'fileUri': fileUri},
                 },
                 {'text': prompt},
               ],
             },
           ],
-          'generationConfig': {
-            'temperature': 0.7,
-            'maxOutputTokens': 1024,
-          },
+          'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 1024},
         };
 
         final client = http.Client();
@@ -118,7 +112,10 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           if (data['candidates'] != null &&
               data['candidates'].isNotEmpty &&
               data['candidates'][0]['content'] != null) {
-            final summary = data['candidates'][0]['content']['parts'][0]['text']?.toString() ?? '';
+            final summary =
+                data['candidates'][0]['content']['parts'][0]['text']
+                    ?.toString() ??
+                '';
 
             if (summary.isNotEmpty) {
               final contentType = metadata['contentType']?.toString() ?? 'reel';
@@ -135,12 +132,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
                 'engagement': {},
                 'hashtags': hashtags,
                 'rawCaption': existingCaption,
-                'aiSummary': true, // Flag to indicate this came from AI analysis
+                'aiSummary':
+                    true, // Flag to indicate this came from AI analysis
               };
             }
           }
         } else {
-          print('Gemini video analysis failed: ${response.statusCode} - ${response.body}');
+          print(
+            'Gemini video analysis failed: ${response.statusCode} - ${response.body}',
+          );
         }
       } finally {
         // Clean up temp file
@@ -173,7 +173,7 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'file': {'displayName': 'instagram_reel.mp4'}
+          'file': {'displayName': 'instagram_reel.mp4'},
         }),
       );
 
@@ -209,7 +209,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
         print('Video uploaded to Gemini: $fileUri');
         return fileUri;
       } else {
-        print('Failed to upload video: ${uploadResponse.statusCode} - ${uploadResponse.body}');
+        print(
+          'Failed to upload video: ${uploadResponse.statusCode} - ${uploadResponse.body}',
+        );
       }
     } catch (e) {
       print('Error uploading video to Gemini: $e');
@@ -275,7 +277,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
   String? _extractYouTubeVideoId(String url) {
     final uri = Uri.parse(url);
     // /shorts/VIDEO_ID
-    final shortsMatch = RegExp(r'/shorts/([A-Za-z0-9_-]+)').firstMatch(uri.path);
+    final shortsMatch = RegExp(
+      r'/shorts/([A-Za-z0-9_-]+)',
+    ).firstMatch(uri.path);
     if (shortsMatch != null) return shortsMatch.group(1);
     // youtu.be/VIDEO_ID
     if (uri.host.contains('youtu.be')) {
@@ -293,11 +297,16 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
       final watchUrl = 'https://www.youtube.com/watch?v=$videoId';
       try {
         final client = http.Client();
-        final response = await client.get(Uri.parse(watchUrl), headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9',
-        }).timeout(Duration(seconds: 20));
+        final response = await client
+            .get(
+              Uri.parse(watchUrl),
+              headers: {
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9',
+              },
+            )
+            .timeout(Duration(seconds: 20));
         client.close();
 
         if (response.statusCode == 200) {
@@ -358,11 +367,16 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
     // Strategy 3: Fetch the Shorts page directly
     try {
       final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }).timeout(Duration(seconds: 20));
+      final response = await client
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+          )
+          .timeout(Duration(seconds: 20));
       client.close();
 
       if (response.statusCode == 200) {
@@ -375,13 +389,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
         final scripts = document.querySelectorAll('script');
         for (final script in scripts) {
           final text = script.text;
-          if (text.contains('ytInitialData') || text.contains('ytInitialPlayerResponse')) {
+          if (text.contains('ytInitialData') ||
+              text.contains('ytInitialPlayerResponse')) {
             // Try shortDescription
             final shortDescMatch = RegExp(
               r'"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"',
             ).firstMatch(text);
             if (shortDescMatch != null) {
-              caption = shortDescMatch.group(1)!
+              caption = shortDescMatch
+                  .group(1)!
                   .replaceAll('\\n', '\n')
                   .replaceAll('\\r', '')
                   .replaceAll('\\"', '"')
@@ -422,7 +438,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
 
         return {
           'title': title,
-          'description': cleanCaption.isNotEmpty ? cleanCaption : _removeHashtags(title),
+          'description': cleanCaption.isNotEmpty
+              ? cleanCaption
+              : _removeHashtags(title),
           'author': author,
           'platform': 'YouTube',
           'contentType': 'short',
@@ -446,7 +464,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
       'author': '',
       'platform': 'YouTube',
       'contentType': 'short',
-      'thumbnail': videoId != null ? 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg' : '',
+      'thumbnail': videoId != null
+          ? 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg'
+          : '',
       'publishDate': '',
       'duration': '',
       'viewCount': '',
@@ -479,9 +499,13 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           final videoUrl = authResult['videoUrl']?.toString() ?? '';
 
           // Try AI video analysis first for reels/videos
-          if (videoUrl.isNotEmpty && (contentType == 'reel' || contentType == 'igtv')) {
+          if (videoUrl.isNotEmpty &&
+              (contentType == 'reel' || contentType == 'igtv')) {
             print('Attempting AI video analysis for Instagram $contentType...');
-            final videoSummary = await _analyzeInstagramVideo(videoUrl, authResult);
+            final videoSummary = await _analyzeInstagramVideo(
+              videoUrl,
+              authResult,
+            );
             if (videoSummary != null && _hasUsefulData(videoSummary)) {
               print('AI video analysis successful!');
               return videoSummary;
@@ -546,33 +570,54 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
     final desc = data['description']?.toString() ?? '';
     final author = data['author']?.toString() ?? '';
     final rawCaption = data['rawCaption']?.toString() ?? '';
-    return title.length > 15 || desc.isNotEmpty || author.isNotEmpty || rawCaption.isNotEmpty;
+    return title.length > 15 ||
+        desc.isNotEmpty ||
+        author.isNotEmpty ||
+        rawCaption.isNotEmpty;
   }
 
   // Strategy 1: Standard HTML scraping with og: meta tags
-  Future<Map<String, dynamic>?> _scrapeInstagramHtml(String url, String contentType) async {
+  Future<Map<String, dynamic>?> _scrapeInstagramHtml(
+    String url,
+    String contentType,
+  ) async {
     try {
       final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'ig_cb=1',
-      }).timeout(Duration(seconds: 15));
+      final response = await client
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept':
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cookie': 'ig_cb=1',
+            },
+          )
+          .timeout(Duration(seconds: 15));
       client.close();
 
       if (response.statusCode == 200) {
         final document = html_parser.parse(response.body);
-        final ogDesc = _extractFromMeta(document, 'property="og:description"') ?? '';
+        final ogDesc =
+            _extractFromMeta(document, 'property="og:description"') ?? '';
         final ogTitle = _extractFromMeta(document, 'property="og:title"') ?? '';
-        final twitterDesc = _extractFromMeta(document, 'name="twitter:description"') ?? '';
-        final twitterTitle = _extractFromMeta(document, 'name="twitter:title"') ?? '';
+        final twitterDesc =
+            _extractFromMeta(document, 'name="twitter:description"') ?? '';
+        final twitterTitle =
+            _extractFromMeta(document, 'name="twitter:title"') ?? '';
         final metaDesc = _extractFromMeta(document, 'name="description"') ?? '';
 
         // Pick the richest text available
         String rawText = '';
-        for (final candidate in [ogDesc, twitterDesc, metaDesc, ogTitle, twitterTitle]) {
+        for (final candidate in [
+          ogDesc,
+          twitterDesc,
+          metaDesc,
+          ogTitle,
+          twitterTitle,
+        ]) {
           if (candidate.length > rawText.length) {
             rawText = candidate;
           }
@@ -615,11 +660,18 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
   }
 
   // Strategy 2: noembed.com oEmbed proxy
-  Future<Map<String, dynamic>?> _scrapeInstagramOEmbed(String url, String contentType) async {
+  Future<Map<String, dynamic>?> _scrapeInstagramOEmbed(
+    String url,
+    String contentType,
+  ) async {
     try {
       final client = http.Client();
       final response = await client
-          .get(Uri.parse('https://noembed.com/embed?url=${Uri.encodeComponent(url)}'))
+          .get(
+            Uri.parse(
+              'https://noembed.com/embed?url=${Uri.encodeComponent(url)}',
+            ),
+          )
           .timeout(Duration(seconds: 15));
       client.close();
 
@@ -635,9 +687,13 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           final cleanCaption = _removeHashtags(caption);
 
           return {
-            'title': cleanCaption.isNotEmpty ? cleanCaption : 'Instagram $contentType',
+            'title': cleanCaption.isNotEmpty
+                ? cleanCaption
+                : 'Instagram $contentType',
             'description': cleanCaption,
-            'author': author.isNotEmpty ? (author.startsWith('@') ? author : '@$author') : '',
+            'author': author.isNotEmpty
+                ? (author.startsWith('@') ? author : '@$author')
+                : '',
             'platform': 'Instagram',
             'contentType': contentType,
             'thumbnail': data['thumbnail_url']?.toString() ?? '',
@@ -657,20 +713,30 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
   }
 
   // Strategy 3: Mobile user agent scraping
-  Future<Map<String, dynamic>?> _scrapeInstagramMobile(String url, String contentType) async {
+  Future<Map<String, dynamic>?> _scrapeInstagramMobile(
+    String url,
+    String contentType,
+  ) async {
     try {
       final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }).timeout(Duration(seconds: 15));
+      final response = await client
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+              'Accept':
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+          )
+          .timeout(Duration(seconds: 15));
       client.close();
 
       if (response.statusCode == 200) {
         final document = html_parser.parse(response.body);
-        final ogDesc = _extractFromMeta(document, 'property="og:description"') ?? '';
+        final ogDesc =
+            _extractFromMeta(document, 'property="og:description"') ?? '';
         final ogTitle = _extractFromMeta(document, 'property="og:title"') ?? '';
 
         String rawText = ogDesc.isNotEmpty ? ogDesc : ogTitle;
@@ -679,11 +745,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           final scripts = document.querySelectorAll('script');
           for (final script in scripts) {
             final text = script.text;
-            if (text.contains('"caption"') || text.contains('"edge_media_to_caption"')) {
+            if (text.contains('"caption"') ||
+                text.contains('"edge_media_to_caption"')) {
               // Try to extract caption from JSON
-              final captionMatch = RegExp(r'"text"\s*:\s*"([^"]+)"').firstMatch(text);
+              final captionMatch = RegExp(
+                r'"text"\s*:\s*"([^"]+)"',
+              ).firstMatch(text);
               if (captionMatch != null) {
-                rawText = captionMatch.group(1)!
+                rawText = captionMatch
+                    .group(1)!
                     .replaceAll('\\n', ' ')
                     .replaceAll('\\u0040', '@');
                 break;
@@ -725,20 +795,30 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
   }
 
   // Strategy 4: Try Instagram's internal API endpoint
-  Future<Map<String, dynamic>?> _scrapeInstagramApi(String url, String contentType) async {
+  Future<Map<String, dynamic>?> _scrapeInstagramApi(
+    String url,
+    String contentType,
+  ) async {
     try {
       // Extract shortcode from URL
-      final shortcodeMatch = RegExp(r'/(p|reel|reels|tv)/([A-Za-z0-9_-]+)').firstMatch(url);
+      final shortcodeMatch = RegExp(
+        r'/(p|reel|reels|tv)/([A-Za-z0-9_-]+)',
+      ).firstMatch(url);
       if (shortcodeMatch == null) return null;
 
       final apiUrl = '${url.split('?')[0]}?__a=1&__d=dis';
       final client = http.Client();
-      final response = await client.get(Uri.parse(apiUrl), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
-        'Accept': 'application/json, text/plain, */*',
-        'X-Requested-With': 'XMLHttpRequest',
-      }).timeout(Duration(seconds: 10));
+      final response = await client
+          .get(
+            Uri.parse(apiUrl),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+              'Accept': 'application/json, text/plain, */*',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          )
+          .timeout(Duration(seconds: 10));
       client.close();
 
       if (response.statusCode == 200) {
@@ -750,7 +830,8 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
 
           if (data is Map) {
             // Try graphql structure
-            final item = data['graphql']?['shortcode_media'] ??
+            final item =
+                data['graphql']?['shortcode_media'] ??
                 data['items']?[0] ??
                 data;
 
@@ -760,11 +841,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
               if (captionEdges is List && captionEdges.isNotEmpty) {
                 caption = captionEdges[0]['node']?['text']?.toString() ?? '';
               }
-              caption = caption.isEmpty ? (item['caption']?['text']?.toString() ?? '') : caption;
+              caption = caption.isEmpty
+                  ? (item['caption']?['text']?.toString() ?? '')
+                  : caption;
 
               // Get author
-              author = item['owner']?['username']?.toString() ??
-                  item['user']?['username']?.toString() ?? '';
+              author =
+                  item['owner']?['username']?.toString() ??
+                  item['user']?['username']?.toString() ??
+                  '';
             }
           }
 
@@ -774,7 +859,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           final cleanCaption = _removeHashtags(caption);
 
           return {
-            'title': cleanCaption.isNotEmpty ? cleanCaption : 'Instagram $contentType',
+            'title': cleanCaption.isNotEmpty
+                ? cleanCaption
+                : 'Instagram $contentType',
             'description': cleanCaption,
             'author': author.isNotEmpty ? '@$author' : '',
             'platform': 'Instagram',
@@ -845,11 +932,16 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
         final cleanCaption = _removeHashtags(caption);
         // Merge all hashtags: from meta description, title, and caption
         final titleHashtags = _extractHashtags(contentData['title'] ?? '');
-        final allHashtags = <String>{...hashtags, ...titleHashtags, ...captionHashtags}.toList();
+        final allHashtags = <String>{
+          ...hashtags,
+          ...titleHashtags,
+          ...captionHashtags,
+        }.toList();
         contentData['hashtags'] = allHashtags;
         contentData['rawCaption'] = caption;
         // Use caption as description if it's richer than meta description
-        if (cleanCaption.length > (contentData['description']?.toString().length ?? 0)) {
+        if (cleanCaption.length >
+            (contentData['description']?.toString().length ?? 0)) {
           contentData['description'] = cleanCaption;
         }
       } else {
@@ -874,13 +966,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
     final scripts = document.querySelectorAll('script');
     for (final script in scripts) {
       final text = script.text;
-      if (text.contains('ytInitialPlayerResponse') || text.contains('ytInitialData')) {
+      if (text.contains('ytInitialPlayerResponse') ||
+          text.contains('ytInitialData')) {
         // Extract shortDescription from ytInitialPlayerResponse
         final shortDescMatch = RegExp(
           r'"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"',
         ).firstMatch(text);
         if (shortDescMatch != null) {
-          caption = shortDescMatch.group(1)!
+          caption = shortDescMatch
+              .group(1)!
               .replaceAll('\\n', '\n')
               .replaceAll('\\r', '')
               .replaceAll('\\"', '"')
@@ -892,7 +986,8 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
           r'"description"\s*:\s*\{\s*"simpleText"\s*:\s*"((?:[^"\\]|\\.)*)"',
         ).firstMatch(text);
         if (descMatch != null) {
-          caption = descMatch.group(1)!
+          caption = descMatch
+              .group(1)!
               .replaceAll('\\n', '\n')
               .replaceAll('\\r', '')
               .replaceAll('\\"', '"')
@@ -1071,7 +1166,9 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
       final isShort = path.contains('/shorts/');
       return {
         'title': isShort ? 'YouTube Short' : 'YouTube Video',
-        'description': isShort ? 'Short video content from YouTube' : 'Video content from YouTube',
+        'description': isShort
+            ? 'Short video content from YouTube'
+            : 'Video content from YouTube',
         'author': '',
         'platform': 'YouTube',
         'contentType': isShort ? 'short' : 'video',
@@ -1135,7 +1232,8 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
             .where((c) => c != 'Create New')
             .toList();
         if (validCollections.isNotEmpty) {
-          collectionsContext = '''
+          collectionsContext =
+              '''
 
           The user has the following existing collections: ${validCollections.join(', ')}
 
@@ -1207,8 +1305,7 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
               final generatedData = jsonDecode(cleanedText);
               return {
                 'tags':
-                    generatedData['tags'] ??
-                    _generateFallbackTags(contentData),
+                    generatedData['tags'] ?? _generateFallbackTags(contentData),
                 'description':
                     generatedData['description'] ??
                     _generateFallbackDescription(contentData),
@@ -1465,11 +1562,6 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
   }
 
   // ===== RESPONSE PARSING =====
-
-  String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1);
-  }
 
   String _cleanJsonResponse(String text) {
     text = text.replaceAll('```json', '').replaceAll('```', '');
