@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-const platform = MethodChannel('com.example.clipper/share');
+const platform = MethodChannel('com.app.clipvault/share');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Clipper',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: AuthWrapper(sharedText: sharedText),

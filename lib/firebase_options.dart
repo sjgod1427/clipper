@@ -65,7 +65,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'fir-loginsignup-6cdbe.firebasestorage.app',
     androidClientId: '453462497977-me8j0ncfsrk2jsgebt223grpbfeecc67.apps.googleusercontent.com',
     iosClientId: '453462497977-t4tecquaao7gjbnbq56ccvqgono8tedo.apps.googleusercontent.com',
-    iosBundleId: 'com.example.clipper',
+    iosBundleId: 'com.app.clipvault',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -76,7 +76,7 @@ class DefaultFirebaseOptions {
     storageBucket: 'fir-loginsignup-6cdbe.firebasestorage.app',
     androidClientId: '453462497977-me8j0ncfsrk2jsgebt223grpbfeecc67.apps.googleusercontent.com',
     iosClientId: '453462497977-t4tecquaao7gjbnbq56ccvqgono8tedo.apps.googleusercontent.com',
-    iosBundleId: 'com.example.clipper',
+    iosBundleId: 'com.app.clipvault',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

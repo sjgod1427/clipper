@@ -1,4 +1,4 @@
-package com.example.clipper  // Update with your actual package
+package com.app.clipvault  // Update with your actual package
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,7 +7,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.clipper/share"
+    private val CHANNEL = "com.app.clipvault/share"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
