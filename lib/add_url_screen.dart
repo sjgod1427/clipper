@@ -321,7 +321,7 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
         nameController.text = info['name'] ?? info['title'] ?? '';
         descriptionController.text = info['description'] ?? '';
 
-        String suggestedTags = info['tag'] ?? '';
+        String suggestedTags = info['tags'] ?? '';
         if (suggestedTags.isNotEmpty) {
           tagsController.text = suggestedTags;
         }
