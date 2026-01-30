@@ -1,6 +1,8 @@
 import 'package:clipper/Widgets/video_card.dart';
 import 'package:clipper/add_url_screen.dart';
+import 'package:clipper/firebase_service.dart';
 import 'package:clipper/models.dart';
+import 'package:clipper/video_details_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -558,7 +560,51 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             right: 4,
                             bottom: 4,
                           ),
-                          child: RecentVideoCard(video: video, onTap: () => {}),
+                          child: RecentVideoCard(
+                            video: video,
+                            onTap: () async {
+                              // Find the collection this video belongs to
+                              final collectionName = await FirestoreService()
+                                  .findVideoCollectionOptimized(
+                                userId: FirebaseAuth.instance.currentUser!.uid,
+                                videoId: video.id,
+                              );
+
+                              if (collectionName != null && context.mounted) {
+                                Navigator.push(
+                                  context,
+                                  PageRouteBuilder(
+                                    pageBuilder: (context, animation, secondaryAnimation) =>
+                                        VideoDetailScreen(
+                                      videoData: {
+                                        'name': video.name,
+                                        'description': video.description,
+                                        'url': video.url,
+                                        'tags': video.tags,
+                                        'createdAt': video.createdAt,
+                                      },
+                                      videoId: video.id,
+                                      collectionName: collectionName,
+                                    ),
+                                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                      return SlideTransition(
+                                        position: Tween<Offset>(
+                                          begin: const Offset(1, 0),
+                                          end: Offset.zero,
+                                        ).animate(
+                                          CurvedAnimation(
+                                            parent: animation,
+                                            curve: Curves.easeInOut,
+                                          ),
+                                        ),
+                                        child: child,
+                                      );
+                                    },
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                         );
                       }).toList(),
 

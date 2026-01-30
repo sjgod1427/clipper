@@ -3,11 +3,14 @@ import 'package:clipper/Widgets/collection_card.dart';
 import 'package:clipper/Widgets/video_card.dart';
 import 'package:clipper/add_url_screen.dart';
 import 'package:clipper/collections.dart';
+import 'package:clipper/firebase_service.dart';
 import 'package:clipper/library_screen.dart';
 import 'package:clipper/models.dart';
 import 'package:clipper/saved_collections.dart';
 import 'package:clipper/service.dart';
 import 'package:clipper/settings.dart';
+import 'package:clipper/video_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -409,8 +412,47 @@ class _HomeScreenState extends State<HomeScreen> {
                       margin: const EdgeInsets.only(right: 16),
                       child: RecentVideoCard(
                         video: video,
-                        onTap: () {
-                          // Handle video tap
+                        onTap: () async {
+                          // Find the collection this video belongs to
+                          final collectionName = await FirestoreService()
+                              .findVideoCollectionOptimized(
+                            userId: FirebaseAuth.instance.currentUser!.uid,
+                            videoId: video.id,
+                          );
+
+                          if (collectionName != null && context.mounted) {
+                            Navigator.push(
+                              context,
+                              PageRouteBuilder(
+                                pageBuilder: (context, animation, secondaryAnimation) =>
+                                    VideoDetailScreen(
+                                  videoData: {
+                                    'name': video.name,
+                                    'description': video.description,
+                                    'url': video.url,
+                                    'tags': video.tags,
+                                    'createdAt': video.createdAt,
+                                  },
+                                  videoId: video.id,
+                                  collectionName: collectionName,
+                                ),
+                                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                  return SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(1, 0),
+                                      end: Offset.zero,
+                                    ).animate(
+                                      CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeInOut,
+                                      ),
+                                    ),
+                                    child: child,
+                                  );
+                                },
+                              ),
+                            );
+                          }
                         },
                         onDelete: () {
                           // Refresh the list after deletion

@@ -63,6 +63,24 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
       urlController.text = widget.sharedText!;
     }
     _loadCollections();
+    // Listen to controllers to update clear button visibility
+    tagsController.addListener(_onFieldChanged);
+    descriptionController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    tagsController.removeListener(_onFieldChanged);
+    descriptionController.removeListener(_onFieldChanged);
+    urlController.dispose();
+    nameController.dispose();
+    descriptionController.dispose();
+    tagsController.dispose();
+    super.dispose();
   }
 
   // Helper method to extract platform from URL
@@ -612,13 +630,58 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
             const SizedBox(height: 24),
 
             // Description Section
-            Text(
-              'Description',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Description',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+                if (descriptionController.text.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        descriptionController.clear();
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.clear_rounded,
+                            size: 14,
+                            color: Colors.red[400],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Clear',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.red[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             TextField(
@@ -735,13 +798,59 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
             const SizedBox(height: 24),
 
             // Tags Section
-            Text(
-              'Tags (Optional)',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Tags (Optional)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+                if (tagsController.text.isNotEmpty || selectedQuickTags.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        tagsController.clear();
+                        selectedQuickTags.clear();
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.red.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.clear_all_rounded,
+                            size: 14,
+                            color: Colors.red[400],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Clear All',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.red[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             TextField(
