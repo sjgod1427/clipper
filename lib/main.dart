@@ -64,7 +64,7 @@ class AuthWrapper extends StatelessWidget {
           if (sharedText != null) {
             return AddUrlScreen(sharedText: sharedText!);
           } else {
-            return SaveSenseApp();
+            return ClipVaultApp();
           }
         } else {
           return LoginScreen(

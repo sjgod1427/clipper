@@ -11,13 +11,13 @@ import 'package:clipper/settings.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class SaveSenseApp extends StatelessWidget {
+class ClipVaultApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
-          title: 'SaveSense',
+          title: 'ClipVault',
           theme: themeProvider.currentTheme,
           home: MainNavigationScreen(),
           debugShowCheckedModeBanner: false,
@@ -230,13 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Header
                       _buildHeader(isDarkMode),
 
-                      const SizedBox(height: 32),
-
-                      // Share to Save Card
-                      _buildShareToSaveCard(isDarkMode),
-
-                      const SizedBox(height: 32),
-
                       // Collections Section
                       _buildCollectionsSection(isDarkMode),
 
@@ -273,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SaveSense',
+              'ClipVault',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -290,63 +283,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildShareToSaveCard(bool isDarkMode) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF7C4DFF), Color(0xFF9C6AFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Share to Save',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Share any Reel or Short from Instagram or\nYouTube',
-            style: TextStyle(fontSize: 14, color: Colors.white70),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _showDemoDialog,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: const Color(0xFF7C4DFF),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: const Text(
-              'Try Demo Share',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -523,36 +459,5 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int _getTotalItemsCount() {
     return collections.fold(0, (sum, collection) => sum + collection.itemCount);
-  }
-
-  void _showDemoDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).dialogBackgroundColor,
-        title: Text(
-          'Demo Share',
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Colors.black,
-          ),
-        ),
-        content: Text(
-          'This would open the share interface to save videos from Instagram or YouTube.',
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white70
-                : Colors.black87,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFF7C4DFF))),
-          ),
-        ],
-      ),
-    );
   }
 }

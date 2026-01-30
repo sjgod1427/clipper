@@ -5,6 +5,10 @@ import 'package:clipper/models.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
+import 'dart:convert';
 
 class RecentVideoCard extends StatelessWidget {
   final VideoModel video;
@@ -18,8 +22,8 @@ class RecentVideoCard extends StatelessWidget {
     this.onDelete,
   }) : super(key: key);
 
-  // Extract thumbnail URL from video URL
-  String? _getThumbnailUrl(String url) {
+  // Extract thumbnail URL from video URL (synchronous for YouTube)
+  String? _getThumbnailUrlSync(String url) {
     try {
       // YouTube thumbnails
       if (url.contains('youtube.com') || url.contains('youtu.be')) {
@@ -29,11 +33,22 @@ class RecentVideoCard extends StatelessWidget {
           return 'https://img.youtube.com/vi/$videoId/maxresdefault.jpg';
         }
       }
-      // Instagram thumbnails (limited support - Instagram blocks direct image access)
+    } catch (e) {
+      print('Error extracting thumbnail: $e');
+    }
+    return null;
+  }
+
+  // Extract thumbnail URL from video URL (async for Instagram)
+  Future<String?> _getThumbnailUrl(String url) async {
+    try {
+      // YouTube thumbnails (synchronous)
+      if (url.contains('youtube.com') || url.contains('youtu.be')) {
+        return _getThumbnailUrlSync(url);
+      }
+      // Instagram thumbnails (async fetch)
       else if (url.contains('instagram.com')) {
-        // Instagram doesn't allow direct thumbnail extraction
-        // You would need to use Instagram's API for this
-        return null;
+        return await _fetchInstagramThumbnail(url);
       }
       // TikTok thumbnails (limited support)
       else if (url.contains('tiktok.com')) {
@@ -44,6 +59,171 @@ class RecentVideoCard extends StatelessWidget {
       print('Error extracting thumbnail: $e');
     }
     return null;
+  }
+
+  // Fetch Instagram thumbnail using multiple strategies
+  Future<String?> _fetchInstagramThumbnail(String url) async {
+    // Normalize Instagram URL
+    String normalizedUrl = _normalizeInstagramUrl(url);
+    print('Fetching Instagram thumbnail for: $normalizedUrl');
+
+    // Strategy 1: Try oEmbed service (noembed.com) - most reliable
+    String? thumbnail = await _fetchInstagramThumbnailOEmbed(normalizedUrl);
+    if (thumbnail != null && thumbnail.isNotEmpty) {
+      print('Instagram thumbnail fetched via oEmbed: $thumbnail');
+      return thumbnail;
+    }
+
+    // Strategy 2: Try direct HTML scraping with og:image
+    thumbnail = await _fetchInstagramThumbnailHtml(normalizedUrl);
+    if (thumbnail != null && thumbnail.isNotEmpty) {
+      print('Instagram thumbnail fetched via HTML: $thumbnail');
+      return thumbnail;
+    }
+
+    // Strategy 3: Try with mobile user agent
+    thumbnail = await _fetchInstagramThumbnailMobile(normalizedUrl);
+    if (thumbnail != null && thumbnail.isNotEmpty) {
+      print('Instagram thumbnail fetched via mobile: $thumbnail');
+      return thumbnail;
+    }
+
+    print('Failed to fetch Instagram thumbnail for: $normalizedUrl');
+    return null;
+  }
+
+  // Normalize Instagram URL to standard format
+  String _normalizeInstagramUrl(String url) {
+    // Remove query parameters and fragments
+    final uri = Uri.parse(url);
+    String normalized = '${uri.scheme}://${uri.host}${uri.path}';
+    
+    // Ensure www. prefix if missing
+    if (!normalized.contains('www.instagram.com') && normalized.contains('instagram.com')) {
+      normalized = normalized.replaceFirst('instagram.com', 'www.instagram.com');
+    }
+    
+    return normalized;
+  }
+
+  // Strategy 1: Use oEmbed service (noembed.com)
+  Future<String?> _fetchInstagramThumbnailOEmbed(String url) async {
+    try {
+      final client = http.Client();
+      final response = await client
+          .get(Uri.parse('https://noembed.com/embed?url=${Uri.encodeComponent(url)}'))
+          .timeout(const Duration(seconds: 10));
+      client.close();
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic> && data['error'] == null) {
+          final thumbnail = data['thumbnail_url']?.toString();
+          if (thumbnail != null && thumbnail.isNotEmpty) {
+            return thumbnail;
+          }
+        }
+      }
+    } catch (e) {
+      print('oEmbed thumbnail fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Strategy 2: Direct HTML scraping
+  Future<String?> _fetchInstagramThumbnailHtml(String url) async {
+    try {
+      final client = http.Client();
+      final response = await client.get(Uri.parse(url), headers: {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cookie': 'ig_cb=1',
+      }).timeout(const Duration(seconds: 10));
+      client.close();
+
+      if (response.statusCode == 200) {
+        // Check if we got redirected to login page
+        if (response.body.contains('"loginPage"') || 
+            response.body.contains('not-logged-in') ||
+            response.body.contains('Log in to Instagram')) {
+          print('Instagram returned login page, skipping HTML fetch');
+          return null;
+        }
+
+        final document = html_parser.parse(response.body);
+        final ogImage = _extractFromMeta(document, 'property="og:image"');
+        
+        if (ogImage != null && ogImage.isNotEmpty) {
+          // Handle relative URLs
+          if (ogImage.startsWith('//')) {
+            return 'https:$ogImage';
+          } else if (ogImage.startsWith('/')) {
+            final uri = Uri.parse(url);
+            return '${uri.scheme}://${uri.host}$ogImage';
+          }
+          return ogImage;
+        }
+      }
+    } catch (e) {
+      print('HTML thumbnail fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Strategy 3: Mobile user agent
+  Future<String?> _fetchInstagramThumbnailMobile(String url) async {
+    try {
+      final client = http.Client();
+      final response = await client.get(Uri.parse(url), headers: {
+        'User-Agent':
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }).timeout(const Duration(seconds: 10));
+      client.close();
+
+      if (response.statusCode == 200) {
+        // Check if we got redirected to login page
+        if (response.body.contains('"loginPage"') || 
+            response.body.contains('not-logged-in') ||
+            response.body.contains('Log in to Instagram')) {
+          print('Instagram returned login page, skipping mobile fetch');
+          return null;
+        }
+
+        final document = html_parser.parse(response.body);
+        final ogImage = _extractFromMeta(document, 'property="og:image"');
+        
+        if (ogImage != null && ogImage.isNotEmpty) {
+          if (ogImage.startsWith('//')) {
+            return 'https:$ogImage';
+          } else if (ogImage.startsWith('/')) {
+            final uri = Uri.parse(url);
+            return '${uri.scheme}://${uri.host}$ogImage';
+          }
+          return ogImage;
+        }
+      }
+    } catch (e) {
+      print('Mobile thumbnail fetch failed: $e');
+    }
+    return null;
+  }
+
+  // Helper method to extract meta tag content
+  String? _extractFromMeta(dom.Document document, String selector) {
+    try {
+      final element = document.querySelector('meta[$selector]');
+      final content = element?.attributes['content']?.trim();
+      if (content != null && content.isNotEmpty) {
+        return content;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   // Helper methods
@@ -485,79 +665,103 @@ class RecentVideoCard extends StatelessWidget {
   }
 
   Widget _buildThumbnail(BuildContext context) {
-    final thumbnailUrl = _getThumbnailUrl(video.url);
+    // Use FutureBuilder for async thumbnail fetching (needed for Instagram)
+    return FutureBuilder<String?>(
+      future: _getThumbnailUrl(video.url),
+      builder: (context, snapshot) {
+        final thumbnailUrl = snapshot.data;
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
 
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(12),
-          topRight: Radius.circular(12),
-        ),
-        gradient: thumbnailUrl == null
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
-              )
-            : null,
-      ),
-      child: Stack(
-        children: [
-          // Thumbnail image (if available)
-          if (thumbnailUrl != null)
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-              child: Image.network(
-                thumbnailUrl,
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  // Fallback to gradient if image fails to load
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF7C4DFF),
-                          const Color(0xFF9C27B0),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF7C4DFF),
-                          const Color(0xFF9C27B0),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                            : null,
-                        color: Colors.white,
-                      ),
-                    ),
-                  );
-                },
-              ),
+        return Container(
+          height: 180,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              topRight: Radius.circular(12),
             ),
+            gradient: thumbnailUrl == null
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
+                  )
+                : null,
+          ),
+          child: Stack(
+            children: [
+              // Thumbnail image (if available)
+              if (thumbnailUrl != null)
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  child: Image.network(
+                    thumbnailUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to gradient if image fails to load
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF7C4DFF),
+                              const Color(0xFF9C27B0),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              const Color(0xFF7C4DFF),
+                              const Color(0xFF9C27B0),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                )
+              else if (isLoading)
+                // Show loading indicator while fetching Instagram thumbnail
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF7C4DFF),
+                        const Color(0xFF9C27B0),
+                      ],
+                    ),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
           // Dark overlay for better text visibility
           Container(
             decoration: BoxDecoration(
@@ -631,8 +835,10 @@ class RecentVideoCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -207,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen>
         context,
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
-              SaveSenseApp(),
+              ClipVaultApp(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
