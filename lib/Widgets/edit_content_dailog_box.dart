@@ -398,7 +398,6 @@ class EditContentDialog extends StatefulWidget {
 class _EditContentDialogState extends State<EditContentDialog> {
   late TextEditingController nameController;
   late TextEditingController descriptionController;
-  late TextEditingController platformController;
   late TextEditingController tagsController;
 
   bool isLoading = false;
@@ -411,10 +410,7 @@ class _EditContentDialogState extends State<EditContentDialog> {
     super.initState();
 
     nameController = TextEditingController(text: widget.video.name);
-    descriptionController = TextEditingController(
-      text: widget.video.description,
-    );
-    platformController = TextEditingController(text: widget.video.platform);
+    descriptionController = TextEditingController(text: widget.video.description);
     tagsController = TextEditingController(text: widget.video.tags.join(', '));
 
     selectedCollection = widget.collectionName;
@@ -530,7 +526,6 @@ class _EditContentDialogState extends State<EditContentDialog> {
       final updatedData = {
         'name': nameController.text.trim(),
         'description': descriptionController.text.trim(),
-        'platform': platformController.text.trim(),
         'tags': tagsController.text
             .split(',')
             .map((e) => e.trim())
@@ -633,83 +628,73 @@ class _EditContentDialogState extends State<EditContentDialog> {
     }
   }
 
-  InputDecoration _inputDecoration(String label, {String? hint, IconData? icon}) {
+  InputDecoration _inputDecoration(String label, {String? hint, bool isDark = false}) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+      labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+      hintStyle: TextStyle(color: isDark ? Colors.grey[600] : Colors.grey[400]),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF7C4DFF), width: 2),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF7C4DFF), width: 1.5),
       ),
-      filled: true,
-      fillColor: Colors.grey[50],
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final subtleColor = isDark ? Colors.grey[400] : Colors.grey[600];
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 580),
+        width: MediaQuery.of(context).size.width * 0.85,
+        constraints: const BoxConstraints(maxHeight: 520),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF7C4DFF),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Edit Content',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit_note, color: Colors.white, size: 24),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Edit Content',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Icon(
+                    Icons.close,
+                    color: subtleColor,
+                    size: 22,
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.close, color: Colors.white, size: 20),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
+
+            const SizedBox(height: 20),
 
             // Content
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -719,10 +704,9 @@ class _EditContentDialogState extends State<EditContentDialog> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: selectedCollection,
-                            decoration: _inputDecoration(
-                              'Collection',
-                              icon: Icons.folder_outlined,
-                            ),
+                            dropdownColor: isDark ? const Color(0xFF2A2A2A) : Colors.white,
+                            style: TextStyle(color: textColor, fontSize: 14),
+                            decoration: _inputDecoration('Collection', isDark: isDark),
                             items: collections
                                 .map((c) => DropdownMenuItem(
                                       value: c,
@@ -733,67 +717,46 @@ class _EditContentDialogState extends State<EditContentDialog> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF7C4DFF).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.add,
-                              color: Color(0xFF7C4DFF),
-                            ),
-                            onPressed: _showCreateCollectionDialog,
-                            tooltip: 'Create new collection',
-                          ),
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Color(0xFF7C4DFF)),
+                          onPressed: _showCreateCollectionDialog,
+                          tooltip: 'New collection',
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Name Field
                     TextField(
                       controller: nameController,
-                      decoration: _inputDecoration(
-                        'Title',
-                        hint: 'Enter video title',
-                        icon: Icons.title,
-                      ),
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: _inputDecoration('Title', hint: 'Video title', isDark: isDark),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Description Field
                     TextField(
                       controller: descriptionController,
-                      maxLines: 3,
-                      decoration: _inputDecoration(
-                        'Description',
-                        hint: 'Enter description',
-                        icon: Icons.description_outlined,
-                      ),
+                      maxLines: 2,
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: _inputDecoration('Description', hint: 'Enter description', isDark: isDark),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Tags Field
                     TextField(
                       controller: tagsController,
-                      decoration: _inputDecoration(
-                        'Tags',
-                        hint: 'fitness, workout, health',
-                        icon: Icons.label_outlined,
-                      ),
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      decoration: _inputDecoration('Tags', hint: 'tag1, tag2, tag3', isDark: isDark),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 12, top: 6),
+                      padding: const EdgeInsets.only(left: 4, top: 4),
                       child: Text(
-                        'Separate tags with commas',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
+                        'Separate with commas',
+                        style: TextStyle(fontSize: 11, color: subtleColor),
                       ),
                     ),
                   ],
@@ -801,75 +764,50 @@ class _EditContentDialogState extends State<EditContentDialog> {
               ),
             ),
 
-            // Footer with buttons
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.grey[900] : Colors.grey[50],
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
+            const SizedBox(height: 20),
+
+            // Footer buttons
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: isLoading ? null : () => Navigator.pop(context),
+                    child: Text(
+                      'Cancel',
+                      style: TextStyle(color: subtleColor, fontWeight: FontWeight.w500),
+                    ),
+                  ),
                 ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: isLoading ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(color: Colors.grey[300]!),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : saveChanges,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF7C4DFF),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                      elevation: 0,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: isLoading ? null : saveChanges,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C4DFF),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.save_outlined, size: 18),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Save Changes',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ],
+                    child: isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
-                    ),
+                          )
+                        : const Text(
+                            'Save',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
