@@ -43,6 +43,12 @@ class GeminiService {
       return _fetchInstagramContent(url);
     }
 
+    // For YouTube Shorts, use special handling
+    if ((host.contains('youtube.com') && uri.path.contains('/shorts/')) ||
+        host.contains('youtu.be')) {
+      return _fetchYouTubeShortsContent(url);
+    }
+
     // For everything else (including YouTube), use standard HTML scraping
     try {
       final client = http.Client();
@@ -77,6 +83,193 @@ class GeminiService {
       print('Error fetching content: $e');
       return _analyzeUrlPattern(url);
     }
+  }
+
+  // ===== YOUTUBE SHORTS SCRAPING =====
+
+  // Extract video ID from YouTube URL
+  String? _extractYouTubeVideoId(String url) {
+    final uri = Uri.parse(url);
+    // /shorts/VIDEO_ID
+    final shortsMatch = RegExp(r'/shorts/([A-Za-z0-9_-]+)').firstMatch(uri.path);
+    if (shortsMatch != null) return shortsMatch.group(1);
+    // youtu.be/VIDEO_ID
+    if (uri.host.contains('youtu.be')) {
+      return uri.pathSegments.isNotEmpty ? uri.pathSegments[0] : null;
+    }
+    // ?v=VIDEO_ID
+    return uri.queryParameters['v'];
+  }
+
+  Future<Map<String, dynamic>> _fetchYouTubeShortsContent(String url) async {
+    final videoId = _extractYouTubeVideoId(url);
+
+    // Strategy 1: Fetch the regular /watch?v= page which has richer data
+    if (videoId != null) {
+      final watchUrl = 'https://www.youtube.com/watch?v=$videoId';
+      try {
+        final client = http.Client();
+        final response = await client.get(Uri.parse(watchUrl), headers: {
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9',
+        }).timeout(Duration(seconds: 20));
+        client.close();
+
+        if (response.statusCode == 200) {
+          final document = html_parser.parse(response.body);
+          final result = _extractContentFromHtml(document, watchUrl);
+          // Ensure it's marked as a Short
+          result['contentType'] = 'short';
+          if (result['description']?.toString().isNotEmpty == true ||
+              result['rawCaption']?.toString().isNotEmpty == true) {
+            return result;
+          }
+        }
+      } catch (e) {
+        print('YouTube Shorts watch page fetch failed: $e');
+      }
+    }
+
+    // Strategy 2: Use oEmbed API to get title/author
+    if (videoId != null) {
+      try {
+        final oembedUrl =
+            'https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=$videoId&format=json';
+        final client = http.Client();
+        final response = await client
+            .get(Uri.parse(oembedUrl))
+            .timeout(Duration(seconds: 10));
+        client.close();
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final title = data['title']?.toString() ?? '';
+          final author = data['author_name']?.toString() ?? '';
+
+          if (title.isNotEmpty) {
+            final hashtags = _extractHashtags(title);
+            final cleanTitle = _removeHashtags(title);
+            return {
+              'title': cleanTitle.isNotEmpty ? cleanTitle : title,
+              'description': cleanTitle,
+              'author': author,
+              'platform': 'YouTube',
+              'contentType': 'short',
+              'thumbnail': data['thumbnail_url']?.toString() ?? '',
+              'publishDate': '',
+              'duration': '',
+              'viewCount': '',
+              'engagement': {},
+              'hashtags': hashtags,
+              'rawCaption': title,
+            };
+          }
+        }
+      } catch (e) {
+        print('YouTube Shorts oEmbed failed: $e');
+      }
+    }
+
+    // Strategy 3: Fetch the Shorts page directly
+    try {
+      final client = http.Client();
+      final response = await client.get(Uri.parse(url), headers: {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }).timeout(Duration(seconds: 20));
+      client.close();
+
+      if (response.statusCode == 200) {
+        final body = response.body;
+        final document = html_parser.parse(body);
+
+        // Try extracting caption from ytInitialData JSON
+        String caption = '';
+        String author = '';
+        final scripts = document.querySelectorAll('script');
+        for (final script in scripts) {
+          final text = script.text;
+          if (text.contains('ytInitialData') || text.contains('ytInitialPlayerResponse')) {
+            // Try shortDescription
+            final shortDescMatch = RegExp(
+              r'"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"',
+            ).firstMatch(text);
+            if (shortDescMatch != null) {
+              caption = shortDescMatch.group(1)!
+                  .replaceAll('\\n', '\n')
+                  .replaceAll('\\r', '')
+                  .replaceAll('\\"', '"')
+                  .replaceAll('\\\\', '\\');
+            }
+
+            // Try to get author/channel name
+            final authorMatch = RegExp(
+              r'"ownerChannelName"\s*:\s*"((?:[^"\\]|\\.)*)"',
+            ).firstMatch(text);
+            if (authorMatch != null) {
+              author = authorMatch.group(1)!;
+            }
+            if (author.isEmpty) {
+              final authorMatch2 = RegExp(
+                r'"author"\s*:\s*"((?:[^"\\]|\\.)*)"',
+              ).firstMatch(text);
+              if (authorMatch2 != null) {
+                author = authorMatch2.group(1)!;
+              }
+            }
+
+            if (caption.isNotEmpty) break;
+          }
+        }
+
+        // Fall back to meta tags
+        if (caption.isEmpty) {
+          caption = _extractMetaDescription(document);
+        }
+        if (author.isEmpty) {
+          author = _extractFromMeta(document, 'name="author"') ?? '';
+        }
+
+        final title = _extractTitle(document);
+        final hashtags = _extractHashtags('$caption $title');
+        final cleanCaption = _removeHashtags(caption);
+
+        return {
+          'title': title,
+          'description': cleanCaption.isNotEmpty ? cleanCaption : _removeHashtags(title),
+          'author': author,
+          'platform': 'YouTube',
+          'contentType': 'short',
+          'thumbnail': _extractThumbnail(document, url),
+          'publishDate': '',
+          'duration': '',
+          'viewCount': _extractViewCount(document),
+          'engagement': {},
+          'hashtags': hashtags,
+          'rawCaption': caption.isNotEmpty ? caption : title,
+        };
+      }
+    } catch (e) {
+      print('YouTube Shorts direct fetch failed: $e');
+    }
+
+    // Fallback
+    return {
+      'title': 'YouTube Short',
+      'description': '',
+      'author': '',
+      'platform': 'YouTube',
+      'contentType': 'short',
+      'thumbnail': videoId != null ? 'https://i.ytimg.com/vi/$videoId/hqdefault.jpg' : '',
+      'publishDate': '',
+      'duration': '',
+      'viewCount': '',
+      'engagement': {},
+      'hashtags': <String>[],
+      'rawCaption': '',
+    };
   }
 
   // ===== INSTAGRAM SCRAPING =====
@@ -429,12 +622,30 @@ class GeminiService {
 
     // Platform-specific extraction
     if (host.contains('youtube.com') || host.contains('youtu.be')) {
-      contentData.addAll(_extractYouTubeContent(document));
-      // Also extract hashtags from title
-      final titleHashtags = _extractHashtags(contentData['title'] ?? '');
-      if (titleHashtags.isNotEmpty) {
-        final allHashtags = <String>{...hashtags, ...titleHashtags}.toList();
+      final ytData = _extractYouTubeContent(document);
+      contentData.addAll(ytData);
+
+      // If we scraped a full caption, use it for description and hashtags
+      final caption = ytData['caption']?.toString() ?? '';
+      if (caption.isNotEmpty) {
+        final captionHashtags = _extractHashtags(caption);
+        final cleanCaption = _removeHashtags(caption);
+        // Merge all hashtags: from meta description, title, and caption
+        final titleHashtags = _extractHashtags(contentData['title'] ?? '');
+        final allHashtags = <String>{...hashtags, ...titleHashtags, ...captionHashtags}.toList();
         contentData['hashtags'] = allHashtags;
+        contentData['rawCaption'] = caption;
+        // Use caption as description if it's richer than meta description
+        if (cleanCaption.length > (contentData['description']?.toString().length ?? 0)) {
+          contentData['description'] = cleanCaption;
+        }
+      } else {
+        // Still extract hashtags from title
+        final titleHashtags = _extractHashtags(contentData['title'] ?? '');
+        if (titleHashtags.isNotEmpty) {
+          final allHashtags = <String>{...hashtags, ...titleHashtags}.toList();
+          contentData['hashtags'] = allHashtags;
+        }
       }
     } else {
       contentData.addAll(_extractGenericContent(document, host));
@@ -443,8 +654,41 @@ class GeminiService {
     return contentData;
   }
 
-  // YouTube content extraction — same as original
+  // YouTube content extraction — same as original + caption scraping
   Map<String, dynamic> _extractYouTubeContent(dom.Document document) {
+    // Try to extract the full video caption/description from embedded JS data
+    String caption = '';
+    final scripts = document.querySelectorAll('script');
+    for (final script in scripts) {
+      final text = script.text;
+      if (text.contains('ytInitialPlayerResponse') || text.contains('ytInitialData')) {
+        // Extract shortDescription from ytInitialPlayerResponse
+        final shortDescMatch = RegExp(
+          r'"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"',
+        ).firstMatch(text);
+        if (shortDescMatch != null) {
+          caption = shortDescMatch.group(1)!
+              .replaceAll('\\n', '\n')
+              .replaceAll('\\r', '')
+              .replaceAll('\\"', '"')
+              .replaceAll('\\\\', '\\');
+          break;
+        }
+        // Fallback: try description field
+        final descMatch = RegExp(
+          r'"description"\s*:\s*\{\s*"simpleText"\s*:\s*"((?:[^"\\]|\\.)*)"',
+        ).firstMatch(text);
+        if (descMatch != null) {
+          caption = descMatch.group(1)!
+              .replaceAll('\\n', '\n')
+              .replaceAll('\\r', '')
+              .replaceAll('\\"', '"')
+              .replaceAll('\\\\', '\\');
+          break;
+        }
+      }
+    }
+
     return {
       'platform': 'YouTube',
       'contentType': 'video',
@@ -463,6 +707,7 @@ class GeminiService {
         'likes': _extractEngagementCount(document, 'like'),
         'comments': _extractEngagementCount(document, 'comment'),
       },
+      if (caption.isNotEmpty) 'caption': caption,
     };
   }
 
@@ -610,12 +855,13 @@ class GeminiService {
     final path = uri.path.toLowerCase();
 
     if (host.contains('youtube.com') || host.contains('youtu.be')) {
+      final isShort = path.contains('/shorts/');
       return {
-        'title': 'YouTube Video',
-        'description': 'Video content from YouTube',
+        'title': isShort ? 'YouTube Short' : 'YouTube Video',
+        'description': isShort ? 'Short video content from YouTube' : 'Video content from YouTube',
         'author': '',
         'platform': 'YouTube',
-        'contentType': 'video',
+        'contentType': isShort ? 'short' : 'video',
       };
     } else if (host.contains('instagram.com')) {
       String contentType = 'post';
@@ -974,6 +1220,7 @@ class GeminiService {
     }
 
     if (platform.toLowerCase() == 'youtube') {
+      if (contentType == 'short') return 'YouTube Shorts';
       return 'YouTube Videos';
     } else if (platform.toLowerCase() == 'instagram') {
       switch (contentType) {
