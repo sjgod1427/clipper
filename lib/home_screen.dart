@@ -231,12 +231,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildHeader(isDarkMode),
 
                       // Collections Section
-                      _buildCollectionsSection(isDarkMode),
+                      _buildRecentlySavedSection(isDarkMode),
 
                       const SizedBox(height: 32),
 
                       // Recently Saved Section
-                      _buildRecentlySavedSection(isDarkMode),
+                      _buildCollectionsSection(isDarkMode),
                     ],
                   ),
                 ),
@@ -396,19 +396,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'No Recent Videos',
                 subtitle: 'Your recently saved videos will appear here',
               )
-            : ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: recentlyViewed.length,
-                itemBuilder: (context, index) {
-                  final video = recentlyViewed[index];
-                  return RecentVideoCard(
-                    video: video,
-                    onTap: () {
-                      // Handle video tap
-                    },
-                  );
-                },
+            : SizedBox(
+                height:
+                    MediaQuery.of(context).size.width * 0.85 * 1.2 +
+                    32, // Adaptive height based on card
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  itemCount: recentlyViewed.length,
+                  itemBuilder: (context, index) {
+                    final video = recentlyViewed[index];
+                    return Container(
+                      margin: const EdgeInsets.only(right: 16),
+                      child: RecentVideoCard(
+                        video: video,
+                        onTap: () {
+                          // Handle video tap
+                        },
+                        onDelete: () {
+                          // Refresh the list after deletion
+                          _refreshData();
+                        },
+                      ),
+                    );
+                  },
+                ),
               ),
       ],
     );

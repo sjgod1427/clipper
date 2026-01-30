@@ -97,12 +97,16 @@ class RecentVideoCard extends StatelessWidget {
     // Remove query parameters and fragments
     final uri = Uri.parse(url);
     String normalized = '${uri.scheme}://${uri.host}${uri.path}';
-    
+
     // Ensure www. prefix if missing
-    if (!normalized.contains('www.instagram.com') && normalized.contains('instagram.com')) {
-      normalized = normalized.replaceFirst('instagram.com', 'www.instagram.com');
+    if (!normalized.contains('www.instagram.com') &&
+        normalized.contains('instagram.com')) {
+      normalized = normalized.replaceFirst(
+        'instagram.com',
+        'www.instagram.com',
+      );
     }
-    
+
     return normalized;
   }
 
@@ -111,7 +115,11 @@ class RecentVideoCard extends StatelessWidget {
     try {
       final client = http.Client();
       final response = await client
-          .get(Uri.parse('https://noembed.com/embed?url=${Uri.encodeComponent(url)}'))
+          .get(
+            Uri.parse(
+              'https://noembed.com/embed?url=${Uri.encodeComponent(url)}',
+            ),
+          )
           .timeout(const Duration(seconds: 10));
       client.close();
 
@@ -134,18 +142,24 @@ class RecentVideoCard extends StatelessWidget {
   Future<String?> _fetchInstagramThumbnailHtml(String url) async {
     try {
       final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cookie': 'ig_cb=1',
-      }).timeout(const Duration(seconds: 10));
+      final response = await client
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept':
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Cookie': 'ig_cb=1',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
       client.close();
 
       if (response.statusCode == 200) {
         // Check if we got redirected to login page
-        if (response.body.contains('"loginPage"') || 
+        if (response.body.contains('"loginPage"') ||
             response.body.contains('not-logged-in') ||
             response.body.contains('Log in to Instagram')) {
           print('Instagram returned login page, skipping HTML fetch');
@@ -154,7 +168,7 @@ class RecentVideoCard extends StatelessWidget {
 
         final document = html_parser.parse(response.body);
         final ogImage = _extractFromMeta(document, 'property="og:image"');
-        
+
         if (ogImage != null && ogImage.isNotEmpty) {
           // Handle relative URLs
           if (ogImage.startsWith('//')) {
@@ -176,17 +190,23 @@ class RecentVideoCard extends StatelessWidget {
   Future<String?> _fetchInstagramThumbnailMobile(String url) async {
     try {
       final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: {
-        'User-Agent':
-            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      }).timeout(const Duration(seconds: 10));
+      final response = await client
+          .get(
+            Uri.parse(url),
+            headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+              'Accept':
+                  'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
       client.close();
 
       if (response.statusCode == 200) {
         // Check if we got redirected to login page
-        if (response.body.contains('"loginPage"') || 
+        if (response.body.contains('"loginPage"') ||
             response.body.contains('not-logged-in') ||
             response.body.contains('Log in to Instagram')) {
           print('Instagram returned login page, skipping mobile fetch');
@@ -195,7 +215,7 @@ class RecentVideoCard extends StatelessWidget {
 
         final document = html_parser.parse(response.body);
         final ogImage = _extractFromMeta(document, 'property="og:image"');
-        
+
         if (ogImage != null && ogImage.isNotEmpty) {
           if (ogImage.startsWith('//')) {
             return 'https:$ogImage';
@@ -651,16 +671,168 @@ class RecentVideoCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                tag,
+                tag.length > 10 ? '${tag.substring(0, 10)}...' : tag,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           )
           .toList(),
+    );
+  }
+
+  // Build full cover thumbnail for the card
+  Widget _buildFullCoverThumbnail(BuildContext context) {
+    return FutureBuilder<String?>(
+      future: _getThumbnailUrl(video.url),
+      builder: (context, snapshot) {
+        final thumbnailUrl = snapshot.data;
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+        if (thumbnailUrl != null) {
+          return Image.network(
+            thumbnailUrl,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return _buildGradientFallback();
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return _buildGradientFallback(
+                showLoader: true,
+                progress: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                          loadingProgress.expectedTotalBytes!
+                    : null,
+              );
+            },
+          );
+        } else if (isLoading) {
+          return _buildGradientFallback(showLoader: true);
+        } else {
+          return _buildGradientFallback();
+        }
+      },
+    );
+  }
+
+  // Gradient fallback when thumbnail is not available
+  Widget _buildGradientFallback({bool showLoader = false, double? progress}) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [const Color(0xFF7C4DFF), const Color(0xFF9C27B0)],
+        ),
+      ),
+      child: showLoader
+          ? Center(
+              child: CircularProgressIndicator(
+                value: progress,
+                color: Colors.white,
+              ),
+            )
+          : Center(
+              child: Icon(
+                _getPlatformIcon(video.url),
+                color: Colors.white.withOpacity(0.7),
+                size: 60,
+              ),
+            ),
+    );
+  }
+
+  // Build tag chips for overlay (with better contrast)
+  Widget _buildOverlayTagChips(List<String> tags) {
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: tags
+          .take(3)
+          .map(
+            (tag) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: _getTagColor(tag).withOpacity(0.9),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                tag.length > 10 ? '${tag.substring(0, 10)}...' : tag,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  // Build overlay button with better styling
+  Widget _buildOverlayButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required bool isPrimary,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isPrimary
+              ? const Color(0xFF7C4DFF)
+              : Colors.white.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(12),
+          border: isPrimary
+              ? null
+              : Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -757,84 +929,85 @@ class RecentVideoCard extends StatelessWidget {
                     ),
                   ),
                   child: const Center(
-                    child: CircularProgressIndicator(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
+                ),
+              // Dark overlay for better text visibility
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.1),
+                    ],
+                  ),
+                ),
+              ),
+              // Play overlay
+              Center(
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _getPlatformIcon(video.url),
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ),
+              // Delete button - Top left
+              Positioned(
+                top: 12,
+                left: 12,
+                child: GestureDetector(
+                  onTap: () => _showDeleteConfirmation(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline,
                       color: Colors.white,
+                      size: 20,
                     ),
                   ),
                 ),
-          // Dark overlay for better text visibility
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
               ),
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.black.withOpacity(0.3),
-                  Colors.black.withOpacity(0.1),
-                ],
-              ),
-            ),
-          ),
-          // Play overlay
-          Center(
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _getPlatformIcon(video.url),
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-          ),
-          // Delete button - Top left
-          Positioned(
-            top: 12,
-            left: 12,
-            child: GestureDetector(
-              onTap: () => _showDeleteConfirmation(context),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.9),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.delete_outline,
-                  color: Colors.white,
-                  size: 20,
+              // Platform indicator
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _getPlatformName(video.url),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          // Platform indicator
-          Positioned(
-            top: 12,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _getPlatformName(video.url),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
             ],
           ),
         );
@@ -844,207 +1017,241 @@ class RecentVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth * 0.85;
+    final cardHeight = cardWidth * 1.2; // Adaptive aspect ratio
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        width: cardWidth,
+        height: cardHeight,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.2),
               spreadRadius: 0,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail section with real thumbnails
-            _buildThumbnail(context),
-            // Content section
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    video.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A1A),
-                      height: 1.3,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Full cover thumbnail background
+              _buildFullCoverThumbnail(context),
+
+              // Gradient overlay for better text readability
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.7),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
                   ),
-                  const SizedBox(height: 8),
-                  // Description
-                  Text(
-                    video.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 12),
-                  // Tags
-                  _buildTagChips(video.tags),
-                  const SizedBox(height: 16),
-                  // Bottom row with date and action buttons
-                  Row(
-                    children: [
-                      // Date
-                      Text(
-                        _formatDate(video.createdAt).toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey[500],
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.5,
+                ),
+              ),
+
+              // Content overlaid on thumbnail
+              Padding(
+                padding: EdgeInsets.all(screenWidth * 0.04), // Adaptive padding
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Top section: Delete button, Platform indicator, Date
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Delete button
+                        GestureDetector(
+                          onTap: () => _showDeleteConfirmation(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      // Action buttons
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Info button
-                          GestureDetector(
-                            onTap: () => _showContentInfo(context),
-                            child: Container(
+                        // Platform and Date
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal: 10,
+                                vertical: 6,
                               ),
                               decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
+                                color: Colors.black.withOpacity(0.6),
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Text(
-                                'Info',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[700],
-                                  fontWeight: FontWeight.w500,
+                                _getPlatformName(video.url),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Edit button
-                          ElevatedButton(
-                            onPressed: () async {
-                              try {
-                                String? collectionName =
-                                    await FirestoreService()
-                                        .findVideoCollection(
-                                          userId: FirebaseAuth
-                                              .instance
-                                              .currentUser!
-                                              .uid,
-                                          videoId: video.id,
-                                        );
+                            const SizedBox(height: 6),
+                            Text(
+                              _formatDate(video.createdAt).toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.white.withOpacity(0.9),
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
 
-                                if (collectionName != null) {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => EditContentDialog(
-                                      video: video,
-                                      userId: FirebaseAuth
-                                          .instance
-                                          .currentUser!
-                                          .uid,
-                                      collectionName: collectionName,
-                                    ),
-                                  );
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Could not find video collection',
+                    // Bottom section: Title, Description, Tags, Action buttons
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Text(
+                          video.name,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.045, // Adaptive font size
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        // Description
+                        Text(
+                          video.description,
+                          style: TextStyle(
+                            fontSize: screenWidth * 0.035,
+                            color: Colors.white.withOpacity(0.95),
+                            height: 1.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.5),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 12),
+                        // Tags
+                        _buildOverlayTagChips(video.tags),
+                        const SizedBox(height: 16),
+                        // Action buttons
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Info button
+                            _buildOverlayButton(
+                              icon: Icons.info_outline,
+                              label: 'Info',
+                              onTap: () => _showContentInfo(context),
+                              isPrimary: false,
+                            ),
+                            const SizedBox(width: 8),
+                            // Edit button
+                            _buildOverlayButton(
+                              icon: Icons.edit_outlined,
+                              label: 'Edit',
+                              onTap: () async {
+                                try {
+                                  String? collectionName =
+                                      await FirestoreService()
+                                          .findVideoCollection(
+                                            userId: FirebaseAuth
+                                                .instance
+                                                .currentUser!
+                                                .uid,
+                                            videoId: video.id,
+                                          );
+
+                                  if (collectionName != null) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => EditContentDialog(
+                                        video: video,
+                                        userId: FirebaseAuth
+                                            .instance
+                                            .currentUser!
+                                            .uid,
+                                        collectionName: collectionName,
                                       ),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Could not find video collection',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
                                 }
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.grey[700],
-                              side: BorderSide(color: Colors.grey[300]!),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              elevation: 0,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              },
+                              isPrimary: false,
                             ),
-                            child: const Text(
-                              'Edit',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                            const SizedBox(width: 8),
+                            // Open button
+                            Expanded(
+                              child: _buildOverlayButton(
+                                icon: Icons.open_in_new,
+                                label: 'Open',
+                                onTap: () => _launchUrl(context, video.url),
+                                isPrimary: true,
                               ),
                             ),
-                          ),
-
-                          const SizedBox(width: 8),
-                          // Open button
-                          ElevatedButton(
-                            onPressed: () async {
-                              _launchUrl(context, video.url);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF7C4DFF),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              elevation: 0,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Open',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
