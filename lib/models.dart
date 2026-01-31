@@ -2,6 +2,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+// Predefined icons available for selection
+const List<IconData> kSelectableIcons = [
+  Icons.bookmark,
+  Icons.favorite,
+  Icons.star,
+  Icons.home,
+  Icons.work,
+  Icons.school,
+  Icons.fitness_center,
+  Icons.restaurant,
+  Icons.movie,
+  Icons.music_note,
+  Icons.camera_alt,
+  Icons.travel_explore,
+  Icons.shopping_bag,
+  Icons.sports_soccer,
+  Icons.games,
+  Icons.palette,
+  Icons.book,
+  Icons.science,
+];
+
+IconData getIconFromCode(int codePoint) {
+  for (final icon in kSelectableIcons) {
+    if (icon.codePoint == codePoint) {
+      return icon;
+    }
+  }
+  return Icons.bookmark;
+}
+
 class VideoModel {
   final String id;
   final String name;
@@ -117,7 +148,7 @@ class CollectionModel {
       name: json['name'],
       itemCount: json['itemCount'],
       color: Color(json['color']),
-      icon: IconData(json['icon'], fontFamily: 'MaterialIcons'),
+      icon: getIconFromCode(json['icon']),
       createdAt: DateTime.parse(json['createdAt']),
     );
   }

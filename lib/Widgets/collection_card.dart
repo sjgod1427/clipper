@@ -153,89 +153,112 @@ class CollectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLight = collection.color.computeLuminance() > 0.5;
+    final Color textColor = isLight ? Colors.black87 : Colors.white;
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: () => _showDeleteConfirmation(context),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: collection.color,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              collection.color.withOpacity(0.7),
+              collection.color.withOpacity(0.5),
+            ],
+          ),
+          border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: collection.color.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon and delete button row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(
-                  collection.icon,
-                  color: collection.color.computeLuminance() > 0.5
-                      ? Colors.black87
-                      : Colors.white,
-                  size: 28,
-                ),
-                // Delete button
-                GestureDetector(
-                  onTap: () => _showDeleteConfirmation(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: collection.color.computeLuminance() > 0.5
-                          ? Colors.black87
-                          : Colors.white,
-                      size: 18,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              // Glassy background blur effect
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color.fromARGB(
+                          255,
+                          105,
+                          104,
+                          104,
+                        ).withOpacity(0.5),
+                        Colors.white.withOpacity(0.2),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            const Spacer(),
-
-            // Collection name at bottom
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  collection.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: collection.color.computeLuminance() > 0.5
-                        ? Colors.black87
-                        : Colors.white,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              // Main content
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    // Top row: count on left, delete on right
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Item count
+                        Text(
+                          '${collection.itemCount} ${collection.itemCount == 1 ? 'item' : 'items'}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: textColor.withOpacity(0.8),
+                          ),
+                        ),
+                        // Delete button
+                        GestureDetector(
+                          onTap: () => _showDeleteConfirmation(context),
+                          child: Icon(
+                            Icons.delete_outline,
+                            color: textColor.withOpacity(0.7),
+                            size: 18,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Centered icon
+                    Expanded(
+                      child: Center(
+                        child: Icon(
+                          collection.icon,
+                          color: textColor,
+                          size: 36,
+                        ),
+                      ),
+                    ),
+                    // Collection name at bottom center
+                    Text(
+                      collection.name,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${collection.itemCount} ${collection.itemCount == 1 ? 'item' : 'items'}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: collection.color.computeLuminance() > 0.5
-                        ? Colors.black54
-                        : Colors.white70,
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );

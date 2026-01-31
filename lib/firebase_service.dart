@@ -385,6 +385,7 @@
 //   }
 // }
 
+import 'package:clipper/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -854,7 +855,7 @@ class FirestoreService {
 
   // Helper method to convert stored data back to IconData
   IconData getIconFromCodePoint(int codePoint) {
-    return IconData(codePoint, fontFamily: 'MaterialIcons');
+    return getIconFromCode(codePoint);
   }
 
   // Check if this is user's first time

@@ -42,7 +42,7 @@ class FirebaseService {
 
       final storedIcon = data?['selectedIcon'];
       collectionIcon = storedIcon != null && storedIcon is int
-          ? IconData(storedIcon, fontFamily: 'MaterialIcons')
+          ? getIconFromCode(storedIcon)
           : Icons.bookmark;
     } catch (e) {
       print('Error parsing color/icon for collection ${doc.id}: $e');

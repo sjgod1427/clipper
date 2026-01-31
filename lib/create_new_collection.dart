@@ -1,4 +1,5 @@
 import 'package:clipper/firebase_service.dart';
+import 'package:clipper/models.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -27,26 +28,8 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
     const Color(0xFFFF9800), // Orange
   ];
 
-  final List<IconData> _icons = [
-    Icons.bookmark,
-    Icons.favorite,
-    Icons.star,
-    Icons.home,
-    Icons.work,
-    Icons.school,
-    Icons.fitness_center,
-    Icons.restaurant,
-    Icons.movie,
-    Icons.music_note,
-    Icons.camera_alt,
-    Icons.travel_explore,
-    Icons.shopping_bag,
-    Icons.sports_soccer,
-    Icons.games,
-    Icons.palette,
-    Icons.book,
-    Icons.science,
-  ];
+  // Use shared icon list from models.dart
+  List<IconData> get _icons => kSelectableIcons;
 
   @override
   void dispose() {
