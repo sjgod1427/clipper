@@ -1076,25 +1076,6 @@ class RecentVideoCard extends StatelessWidget {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 8),
-                        // Description
-                        Text(
-                          video.description,
-                          style: TextStyle(
-                            fontSize: screenWidth * 0.035,
-                            color: Colors.white.withOpacity(0.95),
-                            height: 1.3,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.5),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                         const SizedBox(height: 12),
                         // Tags
                         _buildOverlayTagChips(video.tags),

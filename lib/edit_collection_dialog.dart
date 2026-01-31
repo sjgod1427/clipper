@@ -3,19 +3,29 @@ import 'package:clipper/models.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class CreateCollectionDialog extends StatefulWidget {
-  const CreateCollectionDialog({super.key});
+class EditCollectionDialog extends StatefulWidget {
+  final String collectionId;
+  final String collectionName;
+  final Color? currentColor;
+  final IconData? currentIcon;
+
+  const EditCollectionDialog({
+    super.key,
+    required this.collectionId,
+    required this.collectionName,
+    this.currentColor,
+    this.currentIcon,
+  });
 
   @override
-  // ignore: library_private_types_in_public_api
-  _CreateCollectionDialogState createState() => _CreateCollectionDialogState();
+  State<EditCollectionDialog> createState() => _EditCollectionDialogState();
 }
 
-class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
-  final TextEditingController _nameController = TextEditingController();
-  Color _selectedColor = const Color(0xFF4285F4); // Blue
-  IconData _selectedIcon = Icons.bookmark;
-  bool _isCreating = false;
+class _EditCollectionDialogState extends State<EditCollectionDialog> {
+  late TextEditingController _nameController;
+  late Color _selectedColor;
+  late IconData _selectedIcon;
+  bool _isSaving = false;
 
   final List<Color> _colors = [
     const Color(0xFF4285F4), // Blue
@@ -28,8 +38,15 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
     const Color(0xFFFF9800), // Orange
   ];
 
-  // Use shared icon list from models.dart
   List<IconData> get _icons => kSelectableIcons;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.collectionName);
+    _selectedColor = widget.currentColor ?? const Color(0xFF4285F4);
+    _selectedIcon = widget.currentIcon ?? Icons.bookmark;
+  }
 
   @override
   void dispose() {
@@ -37,7 +54,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
     super.dispose();
   }
 
-  Future<void> _createCollection() async {
+  Future<void> _saveChanges() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -60,23 +77,29 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
     }
 
     setState(() {
-      _isCreating = true;
+      _isSaving = true;
     });
 
     try {
       final fs = FirestoreService();
-      await fs.createCollection(
+      await fs.updateCollection(
         user.uid,
+        widget.collectionId,
         _nameController.text.trim(),
         _selectedColor,
         _selectedIcon,
       );
 
       if (mounted) {
-        Navigator.pop(context, _nameController.text.trim()); // Return collection name
+        // Return the new name so the parent can update
+        Navigator.pop(context, {
+          'name': _nameController.text.trim(),
+          'color': _selectedColor,
+          'icon': _selectedIcon,
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Collection created successfully!'),
+            content: Text('Collection updated successfully!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -84,12 +107,12 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _isCreating = false;
+          _isSaving = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating collection: $e'),
+            content: Text('Error updating collection: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -119,7 +142,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header - Fixed at top
+            // Header
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
               decoration: BoxDecoration(
@@ -129,8 +152,22 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
               ),
               child: Row(
                 children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _selectedColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: _selectedColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Text(
-                    'Create Collection',
+                    'Edit Collection',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -139,9 +176,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                   ),
                   const Spacer(),
                   IconButton(
-                    onPressed: _isCreating
-                        ? null
-                        : () => Navigator.pop(context),
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                     color: subtleColor,
                     padding: EdgeInsets.zero,
@@ -161,6 +196,52 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Preview Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            _selectedColor.withOpacity(0.7),
+                            _selectedColor.withOpacity(0.5),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                            _selectedIcon,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _nameController.text.isEmpty
+                                ? 'Collection Name'
+                                : _nameController.text,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // Collection Name
                     Text(
                       'Collection Name',
@@ -173,7 +254,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _nameController,
-                      enabled: !_isCreating,
+                      enabled: !_isSaving,
                       style: TextStyle(color: textColor),
                       decoration: InputDecoration(
                         hintText: 'Enter collection name...',
@@ -188,8 +269,8 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFF7C4DFF),
+                          borderSide: BorderSide(
+                            color: _selectedColor,
                             width: 2,
                           ),
                         ),
@@ -200,8 +281,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                         filled: true,
                         fillColor: inputFillColor,
                       ),
-                      onChanged: (value) =>
-                          setState(() {}), // Rebuild to update button state
+                      onChanged: (value) => setState(() {}),
                     ),
 
                     const SizedBox(height: 24),
@@ -216,14 +296,13 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Color grid with proper spacing
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
                       children: _colors.map((color) {
                         final isSelected = _selectedColor == color;
                         return GestureDetector(
-                          onTap: _isCreating
+                          onTap: _isSaving
                               ? null
                               : () {
                                   setState(() {
@@ -239,10 +318,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                               borderRadius: BorderRadius.circular(12),
                               border: isSelected
                                   ? Border.all(color: Colors.white, width: 3)
-                                  : Border.all(
-                                      color: inputBorderColor,
-                                      width: 1,
-                                    ),
+                                  : Border.all(color: inputBorderColor, width: 1),
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
@@ -277,14 +353,13 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    // Icon grid with proper spacing
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: _icons.map((icon) {
                         final isSelected = _selectedIcon == icon;
                         return GestureDetector(
-                          onTap: _isCreating
+                          onTap: _isSaving
                               ? null
                               : () {
                                   setState(() {
@@ -301,17 +376,13 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                                   : inputFillColor,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isSelected
-                                    ? _selectedColor
-                                    : inputBorderColor,
+                                color: isSelected ? _selectedColor : inputBorderColor,
                                 width: isSelected ? 2 : 1,
                               ),
                             ),
                             child: Icon(
                               icon,
-                              color: isSelected
-                                  ? _selectedColor
-                                  : subtleColor,
+                              color: isSelected ? _selectedColor : subtleColor,
                               size: 20,
                             ),
                           ),
@@ -323,7 +394,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
               ),
             ),
 
-            // Footer - Fixed at bottom
+            // Footer
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -335,9 +406,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isCreating
-                          ? null
-                          : () => Navigator.pop(context),
+                      onPressed: _isSaving ? null : () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -358,21 +427,22 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed:
-                          (_nameController.text.trim().isEmpty || _isCreating)
+                      onPressed: (_nameController.text.trim().isEmpty || _isSaving)
                           ? null
-                          : _createCollection,
+                          : _saveChanges,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C4DFF),
+                        backgroundColor: _selectedColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
-                        disabledForegroundColor: isDark ? Colors.grey[600] : Colors.grey[500],
+                        disabledBackgroundColor:
+                            isDark ? Colors.grey[800] : Colors.grey[300],
+                        disabledForegroundColor:
+                            isDark ? Colors.grey[600] : Colors.grey[500],
                       ),
-                      child: _isCreating
+                      child: _isSaving
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -384,7 +454,7 @@ class _CreateCollectionDialogState extends State<CreateCollectionDialog> {
                               ),
                             )
                           : const Text(
-                              'Create Collection',
+                              'Save Changes',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

@@ -35,11 +35,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Clipper',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: AuthWrapper(sharedText: sharedText),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Clipper',
+          theme: themeProvider.currentTheme,
+          home: AuthWrapper(sharedText: sharedText),
+        );
+      },
     );
   }
 }

@@ -527,6 +527,77 @@ class FirestoreService {
     }
   }
 
+  Future<void> updateCollection(
+    String userId,
+    String collectionId,
+    String newName,
+    Color selectedColor,
+    IconData selectedIcon,
+  ) async {
+    try {
+      print("Updating collection: $collectionId for user: $userId");
+
+      final collectionRef = _db
+          .collection('users')
+          .doc(userId)
+          .collection('collections')
+          .doc(collectionId);
+
+      // If the name changed, we need to migrate the collection
+      if (collectionId != newName) {
+        // Get old collection data
+        final oldDoc = await collectionRef.get();
+        if (!oldDoc.exists) {
+          throw Exception('Collection not found');
+        }
+
+        final oldData = oldDoc.data()!;
+
+        // Get all videos from old collection
+        final videosSnapshot = await collectionRef.collection('videos').get();
+
+        // Create new collection with new name
+        final newCollectionRef = _db
+            .collection('users')
+            .doc(userId)
+            .collection('collections')
+            .doc(newName);
+
+        await newCollectionRef.set({
+          'name': newName,
+          'createdAt': oldData['createdAt'] ?? FieldValue.serverTimestamp(),
+          'selectedIcon': selectedIcon.codePoint,
+          'selectedColor': selectedColor.value,
+        });
+
+        // Move all videos to new collection
+        for (final videoDoc in videosSnapshot.docs) {
+          await newCollectionRef.collection('videos').doc(videoDoc.id).set(videoDoc.data());
+        }
+
+        // Delete old collection videos
+        for (final videoDoc in videosSnapshot.docs) {
+          await collectionRef.collection('videos').doc(videoDoc.id).delete();
+        }
+
+        // Delete old collection
+        await collectionRef.delete();
+      } else {
+        // Just update the existing collection
+        await collectionRef.update({
+          'name': newName,
+          'selectedIcon': selectedIcon.codePoint,
+          'selectedColor': selectedColor.value,
+        });
+      }
+
+      print("Collection updated successfully!");
+    } catch (e) {
+      print("Error updating collection: $e");
+      rethrow;
+    }
+  }
+
   Future<String?> findVideoCollection({
     required String userId,
     required String videoId,

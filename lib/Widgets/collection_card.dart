@@ -208,29 +208,17 @@ class CollectionCard extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   children: [
-                    // Top row: count on left, delete on right
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Item count
-                        Text(
-                          '${collection.itemCount} ${collection.itemCount == 1 ? 'item' : 'items'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: textColor.withOpacity(0.8),
-                          ),
+                    // Item count at top
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${collection.itemCount} ${collection.itemCount == 1 ? 'item' : 'items'}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: textColor.withOpacity(0.8),
                         ),
-                        // Delete button
-                        GestureDetector(
-                          onTap: () => _showDeleteConfirmation(context),
-                          child: Icon(
-                            Icons.delete_outline,
-                            color: textColor.withOpacity(0.7),
-                            size: 18,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                     // Centered icon
                     Expanded(

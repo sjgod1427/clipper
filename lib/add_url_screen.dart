@@ -1,6 +1,7 @@
 import 'package:clipper/gemini_service.dart';
 import 'package:clipper/firebase_service.dart';
 import 'package:clipper/instagram_service.dart';
+import 'package:clipper/create_new_collection.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +38,7 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
   bool isAutoGenerating = false;
   bool isAddingUrl = false;
   bool? _isFromThirdParty;
+  String? _thumbnailUrl; // Store thumbnail URL from generated info
 
   // Quick add tags
   final List<String> quickTags = [
@@ -177,120 +179,21 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
   }
 
   Future<void> _showCreateCollectionDialog() async {
-    final TextEditingController collectionNameController =
-        TextEditingController();
-
-    return showDialog<void>(
+    final result = await showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-        final backgroundColor = isDarkMode
-            ? const Color(0xFF1E1E1E)
-            : Colors.white;
-        final textColor = isDarkMode ? Colors.white : Colors.black87;
-        final hintColor = isDarkMode ? Colors.grey[500] : Colors.grey.shade500;
-        final borderColor = isDarkMode
-            ? Colors.grey[600]
-            : Colors.grey.shade300;
-
-        return AlertDialog(
-          backgroundColor: backgroundColor,
-          title: Text(
-            'Create New Collection',
-            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-          ),
-          content: TextField(
-            controller: collectionNameController,
-            style: TextStyle(color: textColor),
-            decoration: InputDecoration(
-              hintText: 'Enter collection name',
-              hintStyle: TextStyle(color: hintColor),
-              filled: true,
-              fillColor: isDarkMode ? const Color(0xFF2A2A2A) : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: borderColor!),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: borderColor),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF7C4DFF)),
-              ),
-            ),
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                ),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7C4DFF),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Create'),
-              onPressed: () async {
-                final collectionName = collectionNameController.text.trim();
-                if (collectionName.isNotEmpty) {
-                  await _createNewCollection(collectionName);
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
+        return const CreateCollectionDialog();
       },
     );
-  }
 
-  Future<void> _createNewCollection(String collectionName) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) return;
-
-      // Check if collection already exists
-      if (collections.contains(collectionName)) {
-        _showSnackBar(
-          'Collection "$collectionName" already exists!',
-          Colors.orange,
-        );
-        return;
-      }
-
-      // Create the collection in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('collections')
-          .doc(collectionName)
-          .set({
-            'name': collectionName,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-
-      // Update local state
+    // If a collection was created, reload collections and select the new one
+    if (result != null && result.isNotEmpty) {
+      await _loadCollections();
       setState(() {
-        collections.add(collectionName);
-        selectedCollection = collectionName;
+        if (collections.contains(result)) {
+          selectedCollection = result;
+        }
       });
-
-      _showSnackBar(
-        'Collection "$collectionName" created successfully!',
-        Colors.green,
-      );
-    } catch (e) {
-      _showSnackBar('Error creating collection: $e', Colors.red);
     }
   }
 
@@ -359,6 +262,9 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
             collections.contains(recommendedCollection)) {
           selectedCollection = recommendedCollection;
         }
+
+        // Store thumbnail URL for saving
+        _thumbnailUrl = info['thumbnail']?.toString();
       });
 
       _showSnackBar('Details generated successfully!', Colors.green);
@@ -408,9 +314,8 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
         'name': name,
         'platform': _getPlatformFromUrl(url),
         'tags': tags,
-        // 🔥 THIS IS THE IMPORTANT LINE
         'collection': collectionId,
-
+        'thumbnail': _thumbnailUrl ?? '',
         'createdAt': FieldValue.serverTimestamp(),
       };
 

@@ -374,6 +374,7 @@
 // }
 
 import 'package:clipper/models.dart';
+import 'package:clipper/create_new_collection.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -429,93 +430,22 @@ class _EditContentDialogState extends State<EditContentDialog> {
     });
   }
 
-  /// 🔹 CREATE NEW COLLECTION
-  Future<void> _createNewCollection(String name) async {
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
-        .collection('collections')
-        .doc(name)
-        .set({'name': name, 'createdAt': FieldValue.serverTimestamp()});
-
-    setState(() {
-      collections.add(name);
-      selectedCollection = name;
-    });
-  }
-
   /// 🔹 DIALOG TO CREATE COLLECTION
   Future<void> _showCreateCollectionDialog() async {
-    final controller = TextEditingController();
-
-    await showDialog(
+    final result = await showDialog<String>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF7C4DFF).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.create_new_folder_outlined,
-                color: Color(0xFF7C4DFF),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'New Collection',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Enter collection name',
-            prefixIcon: const Icon(Icons.folder_outlined, size: 20),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF7C4DFF), width: 2),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                await _createNewCollection(name);
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7C4DFF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+      builder: (_) => const CreateCollectionDialog(),
     );
+
+    // If a collection was created, reload collections and select the new one
+    if (result != null && result.isNotEmpty) {
+      await _loadCollections();
+      setState(() {
+        if (collections.contains(result)) {
+          selectedCollection = result;
+        }
+      });
+    }
   }
 
   /// 🔹 SAVE CHANGES (MOVE VIDEO IF COLLECTION CHANGED)

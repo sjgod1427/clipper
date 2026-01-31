@@ -2,6 +2,7 @@ import 'package:clipper/add_url_screen.dart';
 import 'package:clipper/video_details_screen.dart';
 import 'package:clipper/models.dart';
 import 'package:clipper/Widgets/video_card.dart';
+import 'package:clipper/edit_collection_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -33,6 +34,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
   String _searchQuery = '';
   bool _isTagsExpanded = false;
   bool _isPlatformsExpanded = false;
+
+  // Collection metadata
+  late String _collectionName;
+  Color? _collectionColor;
+  IconData? _collectionIcon;
 
   // Enhanced tag system with predefined popular tags
   static const List<String> _predefinedTags = [
@@ -95,8 +101,74 @@ class _CollectionScreenState extends State<CollectionScreen> {
   @override
   void initState() {
     super.initState();
+    _collectionName = widget.collectionName;
+    _loadCollectionMetadata();
     _loadVideosFromFirebase();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  Future<void> _loadCollectionMetadata() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('collections')
+          .doc(widget.collectionId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          if (data['selectedColor'] != null) {
+            _collectionColor = Color(data['selectedColor']);
+          }
+          if (data['selectedIcon'] != null) {
+            _collectionIcon = IconData(
+              data['selectedIcon'],
+              fontFamily: 'MaterialIcons',
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('Error loading collection metadata: $e');
+    }
+  }
+
+  Future<void> _showEditCollectionDialog() async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (BuildContext context) {
+        return EditCollectionDialog(
+          collectionId: widget.collectionId,
+          collectionName: _collectionName,
+          currentColor: _collectionColor,
+          currentIcon: _collectionIcon,
+        );
+      },
+    );
+
+    if (result != null && mounted) {
+      final newName = result['name'] as String?;
+      final newColor = result['color'] as Color?;
+      final newIcon = result['icon'] as IconData?;
+
+      setState(() {
+        if (newName != null) _collectionName = newName;
+        if (newColor != null) _collectionColor = newColor;
+        if (newIcon != null) _collectionIcon = newIcon;
+      });
+
+      // If name changed, we need to pop back since the collection ID changed
+      if (newName != null && newName != widget.collectionId) {
+        if (mounted) {
+          Navigator.pop(context, true); // Return true to indicate refresh needed
+        }
+      }
+    }
   }
 
   @override
@@ -318,6 +390,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
     final textColor = isDarkMode ? Colors.white : Colors.black;
     final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
 
+    // Use collection color for theming, fallback to default purple
+    final themeColor = _collectionColor ?? const Color(0xFF7C4DFF);
+    final HSLColor hslColor = HSLColor.fromColor(themeColor);
+    final darkerColor = hslColor.withLightness((hslColor.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+    final lighterColor = hslColor.withLightness((hslColor.lightness + 0.1).clamp(0.0, 1.0)).toColor();
+
     return GestureDetector(
       onTap: () {
         // Dismiss keyboard when tapping outside
@@ -332,73 +410,73 @@ class _CollectionScreenState extends State<CollectionScreen> {
         resizeToAvoidBottomInset: true,
         body: Column(
           children: [
-            // App Bar with Collection Theme
+            // App Bar
             Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: isDarkMode
-                      ? [
-                          Colors.deepPurple.shade700,
-                          Colors.purple.shade600,
-                          Colors.indigo.shade600,
-                        ]
-                      : [
-                          Colors.indigo.shade600,
-                          Colors.blue.shade500,
-                          Colors.cyan.shade400,
-                        ],
-                ),
-              ),
+              color: backgroundColor,
               child: SafeArea(
                 bottom: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.arrow_back_rounded,
+                          color: textColor,
                         ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
-                            Icons.arrow_back_rounded,
-                            color: Colors.white,
-                          ),
-                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                          color: themeColor,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.collections_bookmark_rounded,
+                        child: Icon(
+                          _collectionIcon ?? Icons.collections_bookmark_rounded,
                           color: Colors.white,
-                          size: 24,
+                          size: 18,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          widget.collectionName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _collectionName,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '${_allVideos.length} ${_allVideos.length == 1 ? 'item' : 'items'}',
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                      IconButton(
+                        onPressed: _showEditCollectionDialog,
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          color: secondaryTextColor,
+                          size: 20,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                        tooltip: 'Edit Collection',
                       ),
                     ],
                   ),
@@ -489,6 +567,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                     isDarkMode: isDarkMode,
                                     textColor: textColor,
                                     secondaryTextColor: secondaryTextColor,
+                                    accentColor: themeColor,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -510,6 +589,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                     isDarkMode: isDarkMode,
                                     textColor: textColor,
                                     secondaryTextColor: secondaryTextColor,
+                                    accentColor: themeColor,
                                   ),
                                 ),
                                 // Clear all button
@@ -522,7 +602,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                     child: IconButton(
                                       onPressed: _clearAllFilters,
                                       icon: const Icon(Icons.clear_all_rounded),
-                                      color: const Color(0xFF7C4DFF),
+                                      color: themeColor,
                                       tooltip: 'Clear all filters',
                                     ),
                                   ),
@@ -542,6 +622,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                     isDarkMode,
                                     textColor,
                                     secondaryTextColor,
+                                    themeColor,
                                   )
                                 : const SizedBox.shrink(),
                           ),
@@ -556,6 +637,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                     isDarkMode,
                                     textColor,
                                     secondaryTextColor,
+                                    themeColor,
                                   )
                                 : const SizedBox.shrink(),
                           ),
@@ -573,9 +655,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const CircularProgressIndicator(
+                              CircularProgressIndicator(
                                 strokeWidth: 3,
-                                color: Color(0xFF7C4DFF),
+                                color: themeColor,
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -619,7 +701,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                                           'createdAt': video.createdAt,
                                         },
                                         videoId: video.id,
-                                        collectionName: widget.collectionName,
+                                        collectionName: _collectionName,
                                       ),
                                   transitionsBuilder:
                                       (
@@ -661,8 +743,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: (isDarkMode ? Colors.deepPurple : Colors.indigo)
-                    .withOpacity(0.3),
+                color: themeColor.withOpacity(0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -675,7 +756,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                 pageBuilder: (context, animation, secondaryAnimation) =>
                     AddUrlScreen(
                       collectionId: widget.collectionId,
-                      collectionName: widget.collectionName,
+                      collectionName: _collectionName,
                     ),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
@@ -695,9 +776,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                     },
               ),
             ),
-            backgroundColor: isDarkMode
-                ? Colors.deepPurple.shade600
-                : Colors.indigo.shade600,
+            backgroundColor: themeColor,
             foregroundColor: Colors.white,
             elevation: 0,
             icon: const Icon(Icons.add_rounded),
@@ -706,6 +785,32 @@ class _CollectionScreenState extends State<CollectionScreen> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGlassIconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    double size = 20,
+  }) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Icon(icon, color: Colors.white, size: size),
         ),
       ),
     );
@@ -720,16 +825,18 @@ class _CollectionScreenState extends State<CollectionScreen> {
     required bool isDarkMode,
     required Color textColor,
     required Color? secondaryTextColor,
+    Color? accentColor,
   }) {
+    final Color activeColor = accentColor ?? const Color(0xFF7C4DFF);
     final bool hasSelection = selectedCount > 0;
     final Color buttonColor = hasSelection
-        ? const Color(0xFF7C4DFF).withOpacity(0.15)
+        ? activeColor.withOpacity(0.15)
         : (isDarkMode ? const Color(0xFF2A2A2A) : Colors.grey[100]!);
     final Color iconColor = hasSelection || isExpanded
-        ? const Color(0xFF7C4DFF)
+        ? activeColor
         : secondaryTextColor!;
     final Color titleColor = hasSelection || isExpanded
-        ? const Color(0xFF7C4DFF)
+        ? activeColor
         : textColor;
 
     // Determine what text to display
@@ -748,9 +855,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isExpanded
-                ? const Color(0xFF7C4DFF)
+                ? activeColor
                 : (hasSelection
-                      ? const Color(0xFF7C4DFF).withOpacity(0.3)
+                      ? activeColor.withOpacity(0.3)
                       : Colors.transparent),
             width: 2,
           ),
@@ -786,6 +893,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
     bool isDarkMode,
     Color textColor,
     Color? secondaryTextColor,
+    Color accentColor,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -831,7 +939,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? const Color(0xFF7C4DFF)
+                        ? accentColor
                         : (isDarkMode ? Colors.grey[800] : Colors.grey[200]),
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -873,6 +981,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
     bool isDarkMode,
     Color textColor,
     Color? secondaryTextColor,
+    Color accentColor,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -931,7 +1040,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? const Color(0xFF7C4DFF)
+                            ? accentColor
                             : (isDarkMode
                                   ? Colors.grey[800]
                                   : Colors.grey[200]),
@@ -972,9 +1081,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
   Widget _buildEmptyState() {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final secondaryTextColor = isDarkMode ? Colors.grey[400] : Colors.grey[600];
-    final iconColor = isDarkMode
+    final iconColor = _collectionColor ?? (isDarkMode
         ? Colors.deepPurple.shade400
-        : Colors.indigo.shade400;
+        : Colors.indigo.shade400);
 
     return Center(
       child: Column(
