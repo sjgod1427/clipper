@@ -614,7 +614,8 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
                   vertical: 12,
                 ),
               ),
-              maxLines: 3,
+              maxLines: 5,
+              minLines: 3,
             ),
             const SizedBox(height: 24),
 

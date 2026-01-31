@@ -1405,11 +1405,15 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
     1. "tags": Extract ALL hashtags from the content. Return them as comma-separated values WITHOUT the # symbol. ${hashtags is List && hashtags.isNotEmpty ? 'The following hashtags were found: ${hashtags.join(', ')}. Include all of them.' : 'If no hashtags exist, suggest relevant topic tags based on the content.'} Example: "fitness, motivation, workout, gym"
 
     2. "description": Write a comprehensive description (2-3 sentences) that includes:
-       - The caption/title of the content
-       - Who created it (author name)
-       - Key details like duration, view count, engagement metrics if available
+       - The main topic or subject of the content
        - What users can expect when they access this content
        - Do NOT include any hashtags in the description
+       - Do NOT mention the platform name (Instagram, YouTube, etc.)
+       - Do NOT mention content type (reel, short, video, post, etc.)
+       - Do NOT include the creator's username or author name
+       - Do NOT include likes, comments, view counts, or engagement metrics
+       - Do NOT include dates or publish times
+       - Focus purely on describing WHAT the content is about
 
     3. "collection": A collection name recommendation.
        ${collectionsContext.isNotEmpty ? '- Choose from existing collections if appropriate' : '- Suggest a new collection name'}
@@ -1465,27 +1469,13 @@ Provide a comprehensive 2-4 sentence description that captures what a viewer wou
         ? _removeHashtags(description)
         : _removeHashtags(rawCaption);
 
-    String baseDescription = '';
     if (cleanText.isNotEmpty) {
-      baseDescription = cleanText;
+      return cleanText;
     } else if (title.isNotEmpty) {
-      baseDescription = 'Content titled "$title"';
+      return title;
     } else {
-      baseDescription = 'Content from $platform';
+      return 'Saved content';
     }
-
-    String creatorInfo = author.isNotEmpty ? ' created by $author' : '';
-    String additionalInfo = '';
-
-    if (duration.toString().isNotEmpty && viewCount.toString().isNotEmpty) {
-      additionalInfo = ' Duration: $duration, Views: $viewCount.';
-    } else if (duration.toString().isNotEmpty) {
-      additionalInfo = ' Duration: $duration.';
-    } else if (viewCount.toString().isNotEmpty) {
-      additionalInfo = ' Views: $viewCount.';
-    }
-
-    return 'This is $contentType$creatorInfo on $platform.$additionalInfo $baseDescription';
   }
 
   String _generateFallbackCollection(

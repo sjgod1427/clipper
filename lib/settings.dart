@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:clipper/instagram_service.dart';
+import 'package:clipper/privacy_policy_screen.dart';
 
 // Theme Provider (same as before but with enhanced dark theme)
 class ThemeProvider extends ChangeNotifier {
@@ -1367,7 +1368,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           title: 'Privacy Policy',
                           subtitle: 'Learn about our privacy practices',
                           onTap: () {
-                            // Navigate to privacy policy
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PrivacyPolicyScreen(),
+                              ),
+                            );
                           },
                         ),
                       ]),
